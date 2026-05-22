@@ -4,39 +4,49 @@
 
 ## Current Phase
 
-**Phase 0: Project Initialization**
+**Phase 1: Foundation & Layout**
 
 ---
 
 ## Current Goal
 
-**Install the required tech stack and initialize the Next.js 15 project with all dependencies.**
+**Build the core layout (Sidebar, TopNavbar, Dashboard placeholder).**
 
 ---
 
 ## Completed
 
-None yet. Project is starting from scratch.
+### ✅ Phase 0: Project Initialization
+
+- [x] Step 1: Initialize Next.js 15 with TypeScript and Tailwind CSS v4
+- [x] Step 2: Install and configure shadcn/ui components (16 components)
+- [x] Step 3: Set up Prisma ORM with Region model
+- [x] Step 4: Configure NextAuth v5 with credentials provider
+- [x] Step 5: Install additional dependencies (Zustand, TanStack Query, react-hook-form, Zod, Lucide, Geist, Sonner)
+- [x] Step 6: Apply SupportCRM brand tokens to `globals.css`
+- [x] Step 7: Set up Geist Sans and Geist Mono fonts
+- [x] Step 8: Create initial project folder structure
+- [x] Step 9: Final verification build — `pnpm build` passes clean
 
 ---
 
 ## In Progress
 
-- [x] **Step 1:** Initialize Next.js 15 with TypeScript and Tailwind CSS v4
-- [x] **Step 2:** Install and configure shadcn/ui components
-- [x] **Step 3:** Set up PostgreSQL database and Prisma ORM
-- [x] **Step 4:** Configure NextAuth.js v5 for authentication
-- [x] **Step 5:** Install additional dependencies (Zustand, TanStack Query, etc.)
-- [ ] **Step 6:** Apply SupportCRM brand tokens to `globals.css`
-- [ ] **Step 7:** Set up Geist fonts
-- [ ] **Step 8:** Create initial project structure (folders, layouts)
-- [ ] **Step 9:** Verify clean build with `pnpm build`
+### Phase 1: Foundation & Layout
+
+- [ ] **Step 1:** Create Zustand stores (`store/region-store.ts`, `store/ui-store.ts`)
+- [ ] **Step 2:** Build `AppSidebar` component
+- [ ] **Step 3:** Build `TopNavbar` component
+- [ ] **Step 4:** Build `DashboardLayout` component
+- [ ] **Step 5:** Build shared components (`DataTable`, `StatusBadge`, `PageHeader`, `KPICard`, `EmptyState`)
+- [ ] **Step 6:** Build Dashboard placeholder page (4 KPI cards)
+- [ ] **Step 7:** Verify `pnpm build` passes
 
 ---
 
 ## Phase Roadmap
 
-### Phase 0: Project Initialization ⬅️ YOU ARE HERE
+### Phase 0: Project Initialization ✅ COMPLETE
 **Goal:** Set up the development environment and install all required dependencies.
 
 **Steps:**
@@ -54,7 +64,7 @@ None yet. Project is starting from scratch.
 
 ---
 
-### Phase 1: Foundation & Layout
+### Phase 1: Foundation & Layout ⬅️ YOU ARE HERE
 **Goal:** Build the core layout (Sidebar, TopNavbar, Dashboard placeholder).
 
 **Steps:**
@@ -174,9 +184,9 @@ None yet. Project is starting from scratch.
 - [x] Install Lucide icons: `pnpm add lucide-react`
 - [x] Install Geist fonts: `pnpm add geist`
 - [x] Install toast notifications: `pnpm add sonner`
-- [ ] Apply SupportCRM theme tokens to `app/globals.css`
-- [ ] Create folder structure
-- [ ] Run `pnpm build` to verify setup
+- [x] Apply SupportCRM theme tokens to `app/globals.css`
+- [x] Create folder structure
+- [x] Run `pnpm build` to verify setup
 
 **Notes:**
 - Starting fresh with Next.js 15 (latest stable).
@@ -187,6 +197,31 @@ None yet. Project is starting from scratch.
 - **Step 3 completed:** Prisma 7.8.0 installed. Region model defined in `prisma/schema.prisma`. `lib/db.ts` created with singleton PrismaClient. Database migration pending (PostgreSQL connection needed). Note: Prisma 7 moves `url` from schema to `prisma.config.ts`; `prisma-client-js` provider retained for `@prisma/client` import compatibility. `pnpm build` passes clean.
 - **Step 4 completed:** NextAuth v5 configured with credentials provider. Demo login: admin@supportcrm.io / demo. Created `auth.config.ts` with route protection logic, `lib/auth.ts` with JWT and session callbacks for role/regionId. Added type declarations in `types/next-auth.d.ts`. `middleware.ts` deferred to Phase 2. `pnpm build` passes clean.
 - **Step 5 completed:** All additional dependencies installed. Versions: zustand 5.0.13, @tanstack/react-query 5.100.11, react-hook-form 7.76.0, @hookform/resolvers 5.4.0, zod 4.4.3, lucide-react 1.16.0 (already via shadcn), geist 1.7.1, sonner 2.0.7. No store/hook files created yet. `pnpm build` passes clean.
+- **Step 6 completed:** SupportCRM brand tokens applied to `globals.css` with Tailwind v4 `@theme inline`. Replaced shadcn default oklch theme with project hex tokens. shadcn aliases mapped to brand tokens. Background: #f4f6f9, Primary: #0284c7. `pnpm build` passes clean.
+- **Step 7 completed:** Geist Sans and Geist Mono fonts applied via `geist` package. `app/layout.tsx` sets `--font-geist-sans` and `--font-geist-mono` CSS variables on `<html>`. `globals.css` maps `--font-sans` and `--font-mono` to those variables. `font-sans` Tailwind utility now resolves to Geist Sans. `pnpm build` passes clean.
+- **Step 8 completed:** Project folder structure created per `context/architecture-context.md`. Module-specific folders ready for Phase 1. Folders: `components/{shared,layout,participants,hrm,rostering,incidents}`, `store/`, `hooks/`, `lib/validations/`, `app/(auth)/sign-in/`, `app/(dashboard)/{dashboard,participants,hrm}/`. `.gitkeep` files added to empty dirs. `pnpm build` passes clean.
+- **Step 9 completed (Phase 0 COMPLETE):** Final verification build passed — 0 TypeScript errors, 0 ESLint errors. Phase 0 complete. Tech stack installed and verified. Ready for Phase 1.
+
+**Phase 0 Package Summary:**
+| Package | Version |
+|---|---|
+| next | 15.5.18 |
+| react / react-dom | 19.1.0 |
+| tailwindcss / @tailwindcss/postcss | 4.3.0 |
+| typescript | 5.9.3 |
+| shadcn (16 components) | 4.8.0 |
+| prisma / @prisma/client | 7.8.0 |
+| next-auth | 5.0.0-beta.31 |
+| zustand | 5.0.13 |
+| @tanstack/react-query | 5.100.11 |
+| react-hook-form | 7.76.0 |
+| @hookform/resolvers | 5.4.0 |
+| zod | 4.4.3 |
+| lucide-react | 1.16.0 |
+| geist | 1.7.1 |
+| sonner | 2.0.7 |
+
+**Demo credentials (Phase 2):** `admin@supportcrm.io` / `demo`
 
 ---
 
