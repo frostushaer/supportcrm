@@ -12,6 +12,9 @@
 
 **Build the core layout (Sidebar, TopNavbar, Dashboard placeholder).**
 
+Feature spec created: `context/feature-specs/01-foundation-layout.md`
+Ready to begin Phase 1 implementation following the spec.
+
 ---
 
 ## Completed
@@ -34,7 +37,7 @@
 
 ### Phase 1: Foundation & Layout
 
-- [ ] **Step 1:** Create Zustand stores (`store/region-store.ts`, `store/ui-store.ts`)
+- [x] **Step 1:** Create Zustand stores (`store/region-store.ts`, `store/ui-store.ts`)
 - [ ] **Step 2:** Build `AppSidebar` component
 - [ ] **Step 3:** Build `TopNavbar` component
 - [ ] **Step 4:** Build `DashboardLayout` component
@@ -222,6 +225,12 @@
 | sonner | 2.0.7 |
 
 **Demo credentials (Phase 2):** `admin@supportcrm.io` / `demo`
+
+---
+
+### Session Notes — Phase 1
+
+- **Step 1 completed:** Zustand stores created: `store/region-store.ts` (global region filter — `selectedRegionId`, `setSelectedRegionId`), `store/ui-store.ts` (sidebar state — `sidebarOpen`, `toggleSidebar`, `setSidebarOpen`). Navigation types defined in `types/navigation.ts` (`NavItem`, `NavSection` using `LucideIcon`). `store/.gitkeep` removed. `pnpm build` passes clean.
 
 ---
 
