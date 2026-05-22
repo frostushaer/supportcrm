@@ -25,8 +25,8 @@ None yet. Project is starting from scratch.
 - [x] **Step 1:** Initialize Next.js 15 with TypeScript and Tailwind CSS v4
 - [x] **Step 2:** Install and configure shadcn/ui components
 - [x] **Step 3:** Set up PostgreSQL database and Prisma ORM
-- [ ] **Step 4:** Configure NextAuth.js v5 for authentication
-- [ ] **Step 5:** Install additional dependencies (Zustand, TanStack Query, etc.)
+- [x] **Step 4:** Configure NextAuth.js v5 for authentication
+- [x] **Step 5:** Install additional dependencies (Zustand, TanStack Query, etc.)
 - [ ] **Step 6:** Apply SupportCRM brand tokens to `globals.css`
 - [ ] **Step 7:** Set up Geist fonts
 - [ ] **Step 8:** Create initial project structure (folders, layouts)
@@ -167,13 +167,13 @@ None yet. Project is starting from scratch.
 - [x] Install shadcn/ui CLI: `npx shadcn@latest init`
 - [x] Add shadcn components: Button, Card, Dialog, Sheet, Input, Tabs, Textarea, ScrollArea, DropdownMenu, Select, Badge, Avatar, Separator, Tooltip, Skeleton, Table
 - [x] Install Prisma: `pnpm add prisma @prisma/client && pnpm prisma init`
-- [ ] Install NextAuth: `pnpm add next-auth@beta`
-- [ ] Install Zustand: `pnpm add zustand`
-- [ ] Install TanStack Query: `pnpm add @tanstack/react-query`
-- [ ] Install react-hook-form + Zod: `pnpm add react-hook-form @hookform/resolvers/zod zod`
-- [ ] Install Lucide icons: `pnpm add lucide-react`
-- [ ] Install Geist fonts: `pnpm add geist`
-- [ ] Install toast notifications: `pnpm add sonner`
+- [x] Install NextAuth: `pnpm add next-auth@beta`
+- [x] Install Zustand: `pnpm add zustand`
+- [x] Install TanStack Query: `pnpm add @tanstack/react-query`
+- [x] Install react-hook-form + Zod: `pnpm add react-hook-form @hookform/resolvers zod`
+- [x] Install Lucide icons: `pnpm add lucide-react`
+- [x] Install Geist fonts: `pnpm add geist`
+- [x] Install toast notifications: `pnpm add sonner`
 - [ ] Apply SupportCRM theme tokens to `app/globals.css`
 - [ ] Create folder structure
 - [ ] Run `pnpm build` to verify setup
@@ -185,6 +185,8 @@ None yet. Project is starting from scratch.
 - **Step 1 completed:** Next.js 15.5.18, React 19.1.0, Tailwind CSS 4.3.0, `@tailwindcss/postcss` 4.3.0, TypeScript 5.9.3, ESLint 9.x. `pnpm build` passes clean.
 - **Step 2 completed:** shadcn/ui initialized (style: base-nova, baseColor: neutral, cssVariables: true, iconLibrary: lucide). 16 components installed: Button, Card, Dialog, Sheet, Input, Tabs, Textarea, ScrollArea, DropdownMenu, Select, Badge, Avatar, Separator, Tooltip, Skeleton, Table. `components.json` created. `lib/utils.ts` created with `cn()` helper. `pnpm build` passes clean.
 - **Step 3 completed:** Prisma 7.8.0 installed. Region model defined in `prisma/schema.prisma`. `lib/db.ts` created with singleton PrismaClient. Database migration pending (PostgreSQL connection needed). Note: Prisma 7 moves `url` from schema to `prisma.config.ts`; `prisma-client-js` provider retained for `@prisma/client` import compatibility. `pnpm build` passes clean.
+- **Step 4 completed:** NextAuth v5 configured with credentials provider. Demo login: admin@supportcrm.io / demo. Created `auth.config.ts` with route protection logic, `lib/auth.ts` with JWT and session callbacks for role/regionId. Added type declarations in `types/next-auth.d.ts`. `middleware.ts` deferred to Phase 2. `pnpm build` passes clean.
+- **Step 5 completed:** All additional dependencies installed. Versions: zustand 5.0.13, @tanstack/react-query 5.100.11, react-hook-form 7.76.0, @hookform/resolvers 5.4.0, zod 4.4.3, lucide-react 1.16.0 (already via shadcn), geist 1.7.1, sonner 2.0.7. No store/hook files created yet. `pnpm build` passes clean.
 
 ---
 
