@@ -4,20 +4,29 @@
 
 ## Current Phase
 
-**Phase 1: Foundation & Layout**
+**Phase 2: Authentication**
 
 ---
 
 ## Current Goal
 
-**Build the core layout (Sidebar, TopNavbar, Dashboard placeholder).**
-
-Feature spec created: `context/feature-specs/01-foundation-layout.md`
-Ready to begin Phase 1 implementation following the spec.
+**Build the sign-in page and protect dashboard routes with NextAuth v5 middleware.**
 
 ---
 
 ## Completed
+
+### ✅ Phase 1: Foundation & Layout
+
+- [x] Step 1: Create Zustand stores (region-store, ui-store)
+- [x] Step 2: Build AppSidebar (16 items, 5 sections, collapse)
+- [x] Step 3: Build TopNavbar (toggle, region selector, user menu)
+- [x] Step 4: Build DashboardLayout (app/(dashboard)/layout.tsx)
+- [x] Step 5: Build shared components (PageHeader, KPICard, StatusBadge, EmptyState, DataTable)
+- [x] Step 6: Build Dashboard page (4 KPI cards, Quick Actions)
+- [x] Step 7: Final build verification — `pnpm build` passes clean
+
+---
 
 ### ✅ Phase 0: Project Initialization
 
@@ -38,12 +47,12 @@ Ready to begin Phase 1 implementation following the spec.
 ### Phase 1: Foundation & Layout
 
 - [x] **Step 1:** Create Zustand stores (`store/region-store.ts`, `store/ui-store.ts`)
-- [ ] **Step 2:** Build `AppSidebar` component
-- [ ] **Step 3:** Build `TopNavbar` component
-- [ ] **Step 4:** Build `DashboardLayout` component
-- [ ] **Step 5:** Build shared components (`DataTable`, `StatusBadge`, `PageHeader`, `KPICard`, `EmptyState`)
-- [ ] **Step 6:** Build Dashboard placeholder page (4 KPI cards)
-- [ ] **Step 7:** Verify `pnpm build` passes
+- [x] **Step 2:** Build `AppSidebar` component
+- [x] **Step 3:** Build `TopNavbar` component
+- [x] **Step 4:** Build `DashboardLayout` component
+- [x] **Step 5:** Build shared components (`DataTable`, `StatusBadge`, `PageHeader`, `KPICard`, `EmptyState`)
+- [x] **Step 6:** Build Dashboard placeholder page (4 KPI cards)
+- [x] **Step 7:** Verify `pnpm build` passes
 
 ---
 
@@ -231,6 +240,12 @@ Ready to begin Phase 1 implementation following the spec.
 ### Session Notes — Phase 1
 
 - **Step 1 completed:** Zustand stores created: `store/region-store.ts` (global region filter — `selectedRegionId`, `setSelectedRegionId`), `store/ui-store.ts` (sidebar state — `sidebarOpen`, `toggleSidebar`, `setSidebarOpen`). Navigation types defined in `types/navigation.ts` (`NavItem`, `NavSection` using `LucideIcon`). `store/.gitkeep` removed. `pnpm build` passes clean.
+- **Feature spec created for AppSidebar component:** `context/feature-specs/02-app-sidebar.md` — includes full `navSections` array with all 16 icons/routes, complete component template, collapse logic, active route detection, tooltip behavior for collapsed mode, and styling rules.
+- **Step 3 completed:** `components/layout/top-navbar.tsx` implemented. Sidebar toggle (`PanelLeftClose`/`PanelLeftOpen`) wired to `useUIStore.toggleSidebar`. Logo + wordmark. Region selector (4 hardcoded regions) wired to `useRegionStore`. Search input (placeholder). Notification bell + badge. User avatar dropdown (Admin User / Sign Out). Dynamic `marginLeft` via inline style tracks sidebar state. Fixed `@base-ui/react` API: `DropdownMenuTrigger` has no `asChild` — renders as `<button>` directly; user avatar rendered as child. `pnpm build` passes clean.
+- **Step 2 completed:** `components/layout/app-sidebar.tsx` implemented. 16 nav items in 5 sections (Core, Operations, Compliance, Finance, System). Collapse: `w-60` ↔ `w-16` via `useUIStore`. Active route: exact match for `/dashboard`, `startsWith` for all others. Collapsed mode shows icon-only with `@base-ui/react` Tooltip on hover (`side="right"`). Fixed base-ui API differences (`delay` not `delayDuration`, no `asChild` on `TooltipTrigger`). `pnpm build` passes clean.
+- **Step 4 completed:** `components/layout/dashboard-layout.tsx` implemented — wraps `AppSidebar` + `TopNavbar`, dynamic `marginLeft` (240px/64px) via `useUIStore`, `pt-16` clears fixed navbar, `min-h-screen` fills viewport. `app/(dashboard)/layout.tsx` wires it to the route group. `app/(dashboard)/dashboard/page.tsx` placeholder created. Root `/` redirects to `/dashboard`. `pnpm build` passes clean.
+- **Step 5 completed:** 5 shared components in `components/shared/` — `PageHeader` (sticky top-16, title/description/action), `KPICard` (Card wrapper, value + trend + icon), `StatusBadge` (7 statuses mapped to token colors with dot indicator), `EmptyState` (centered icon/title/description/action), `DataTable` (generic scaffold, search input, rounded-xl table). `components/shared/.gitkeep` removed. Test page at `/test-components`. `pnpm build` passes clean — 7 routes.
+- **Steps 6 & 7 completed:** `app/(dashboard)/dashboard/page.tsx` fully implemented — `PageHeader` with description, 4 `KPICard`s in `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`, Quick Actions panel with 4 buttons. Page metadata added. `pnpm build` passes clean — Phase 1 complete.
 
 ---
 
