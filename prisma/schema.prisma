@@ -7,10 +7,84 @@ datasource db {
 }
 
 model Region {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  state     String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(cuid())
+  name         String        @unique
+  state        String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  participants Participant[]
+}
+
+model Participant {
+  id                   String             @id @default(cuid())
+  firstName            String
+  lastName             String
+  gender               String
+  dateOfBirth          DateTime
+  primaryEmailAddress  String
+  primaryPhoneNumber   String
+  secondaryPhoneNumber String?
+  ndisNumber           String             @unique
+  address              String
+  suburb               String
+  state                String
+  postcode             String
+  status               String
+  serviceSupport       String
+  auditParticipation   Boolean            @default(false)
+  regionId             String
+  region               Region             @relation(fields: [regionId], references: [id])
+  ndisPlans            NDISPlan[]
+  documents            Document[]
+  notes                Note[]
+  serviceAgreements    ServiceAgreement[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model NDISPlan {
+  id              String      @id @default(cuid())
+  participantId   String
+  planStartDate   DateTime
+  planEndDate     DateTime
+  managementStyle String
+  totalBudget     Float
+  usedBudget      Float       @default(0)
+  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Document {
+  id            String      @id @default(cuid())
+  participantId String
+  fileName      String
+  fileUrl       String
+  fileType      String
+  uploadedBy    String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+}
+
+model Note {
+  id            String      @id @default(cuid())
+  participantId String
+  content       String      @db.Text
+  createdBy     String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model ServiceAgreement {
+  id            String      @id @default(cuid())
+  participantId String
+  agreementType String
+  startDate     DateTime
+  endDate       DateTime
+  status        String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }

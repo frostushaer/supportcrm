@@ -1,5 +1,6 @@
 'use client';
 
+import { signOut } from 'next-auth/react';
 import { Bell, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,8 +69,8 @@ export function TopNavbar() {
 
         {/* Region Selector */}
         <Select
-          value={selectedRegionId ?? undefined}
-          onValueChange={setSelectedRegionId}
+          value={selectedRegionId}
+          onValueChange={(v) => setSelectedRegionId(v ?? '')}
         >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select region" />
@@ -137,8 +138,9 @@ export function TopNavbar() {
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="text-[var(--color-error)]"
+              className="cursor-pointer text-[var(--color-error)]"
               variant="destructive"
+              onClick={() => signOut({ callbackUrl: '/sign-in' })}
             >
               Sign Out
             </DropdownMenuItem>

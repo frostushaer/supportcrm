@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 
 interface RegionStore {
-  selectedRegionId: string | null;
-  setSelectedRegionId: (regionId: string | null) => void;
+  selectedRegionId: string;
+  setSelectedRegionId: (regionId: string) => void;
 }
 
 export const useRegionStore = create<RegionStore>((set) => ({
-  selectedRegionId: null,
+  selectedRegionId: '',
   setSelectedRegionId: (regionId) => set({ selectedRegionId: regionId }),
 }));

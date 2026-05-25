@@ -1,0 +1,97 @@
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRegionStore } from '@/store/region-store';
+import type { ParticipantFormData } from '@/lib/validations/participants';
+
+export function useParticipants(status?: string, search?: string) {
+  const { selectedRegionId } = useRegionStore();
+
+  return useQuery({
+    queryKey: ['participants', selectedRegionId, status, search],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedRegionId) params.set('regionId', selectedRegionId);
+      if (status) params.set('status', status);
+      if (search) params.set('search', search);
+
+      const res = await fetch(`/api/participants?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch participants');
+
+      const json = await res.json();
+      return json.data;
+    },
+  });
+}
+
+export function useParticipant(id: string) {
+  return useQuery({
+    queryKey: ['participants', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/participants/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch participant');
+
+      const json = await res.json();
+      return json.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateParticipant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: ParticipantFormData) => {
+      const res = await fetch('/api/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) throw new Error('Failed to create participant');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participants'] });
+    },
+  });
+}
+
+export function useUpdateParticipant(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: Partial<ParticipantFormData>) => {
+      const res = await fetch(`/api/participants/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) throw new Error('Failed to update participant');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participants'] });
+    },
+  });
+}
+
+export function useDeleteParticipant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/participants/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete participant');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participants'] });
+    },
+  });
+}

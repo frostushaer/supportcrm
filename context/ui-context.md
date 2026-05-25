@@ -60,6 +60,45 @@ In `globals.css`:
 
 ---
 
+## Gradient Backgrounds
+
+For KPI cards and feature highlights, use gradient backgrounds via CSS token variables defined in `globals.css`. **Never use raw hex values in components.**
+
+| Variant | From Token | To Token |
+|---------|-----------|---------|
+| Purple | `--gradient-purple-from` | `--gradient-purple-to` |
+| Teal | `--gradient-teal-from` | `--gradient-teal-to` |
+| Blue | `--gradient-blue-from` | `--gradient-blue-to` |
+| Red | `--gradient-red-from` | `--gradient-red-to` |
+| Orange | `--gradient-orange-from` | `--gradient-orange-to` |
+
+**Usage:**
+- Apply via `style={{ background: 'linear-gradient(to bottom right, var(--gradient-X-from), var(--gradient-X-to))' }}`
+- KPI cards with gradients use white text (`text-white`, `text-white/80`, `text-white/70`)
+- Icon containers inside gradient cards use `bg-white/20 text-white`
+- Add `hover:scale-105 transition-all duration-300` for interactive feel
+- Use `shadow-md hover:shadow-lg` for elevation on hover
+
+---
+
+## Shadows & Elevation
+
+Use shadows to create visual hierarchy:
+
+| Level | Class | Use Case |
+|-------|-------|----------|
+| Subtle | `shadow-sm` | Borders, separators |
+| Default | `shadow-md` | Standard cards, panels |
+| Elevated | `shadow-lg` | Gradient cards, modals |
+| Floating | `shadow-xl` | Dropdowns, popovers |
+
+**Hover Effects:**
+```tsx
+className="shadow-md hover:shadow-lg transition-shadow duration-300"
+```
+
+---
+
 ## Sidebar Navigation
 
 **Fixed left sidebar. 240px expanded, 64px icon-only collapsed.**

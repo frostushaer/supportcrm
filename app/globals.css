@@ -24,6 +24,18 @@
   --color-error: #dc2626;
   --color-info: #2563eb;
 
+  /* Gradient Tokens — KPI card variants */
+  --gradient-purple-from: #667eea;
+  --gradient-purple-to: #764ba2;
+  --gradient-teal-from: #48bb78;
+  --gradient-teal-to: #38a169;
+  --gradient-blue-from: #4299e1;
+  --gradient-blue-to: #3182ce;
+  --gradient-red-from: #fc8181;
+  --gradient-red-to: #f56565;
+  --gradient-orange-from: #ed8936;
+  --gradient-orange-to: #dd6b20;
+
   /* shadcn Aliases */
   --background: var(--color-bg);
   --foreground: var(--color-text);
