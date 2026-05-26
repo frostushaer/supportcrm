@@ -4,17 +4,47 @@
 
 ## Current Phase
 
-**Phase 2: Authentication**
+**Phase 4: Next Module**
 
 ---
 
 ## Current Goal
 
-**Build the sign-in page and protect dashboard routes with NextAuth v5 middleware.**
+**TBD — Phase 3 complete.**
 
 ---
 
 ## Completed
+
+### ✅ Phase 3: Participants Module
+
+- [x] Step 1: Prisma schema — `Participant`, `NDISPlan`, `Document`, `Note`, `ServiceAgreement` models + Region back-relation
+- [x] Step 2: `pnpm prisma generate` (no live DB; migration ready to run when DB available)
+- [x] Step 3: Validation schema — `lib/validations/participants.ts` (Zod v4, `auditParticipation: z.boolean()` — no `.default()` to avoid resolver type mismatch)
+- [x] Step 4: API routes — `GET/POST /api/participants`, `GET/PATCH/DELETE /api/participants/[id]` (Next.js 15 `Promise<params>`, `force-dynamic`)
+- [x] Step 5: `QueryClientProvider` added to `app/providers.tsx`
+- [x] Step 6: TanStack Query hooks — `hooks/use-participants.ts` (list, single, create, update, delete)
+- [x] Step 7: List page — `/participants` with search, status filter, DataTable, avatar initials, region column
+- [x] Step 8: `AddParticipantSheet` — 4-step form (Personal → Contact → NDIS → Region), `standardSchemaResolver`
+- [x] Step 9: Profile page — `/participants/[id]` with 5 tabs (Overview, NDIS Plans, Documents, Notes, Service Agreements)
+- [x] Step 10: `lib/db.ts` updated for Prisma v7 — `PrismaPg` adapter pattern
+- [x] Step 11: `pnpm build` passes clean — 9 routes, middleware 91.2 kB
+
+---
+
+### ✅ Phase 2: Authentication
+
+- [x] Step 1: Sign-in page at `/sign-in` (react-hook-form + Zod + NextAuth)
+- [x] Step 2: Auth layout `app/(auth)/layout.tsx`
+- [x] Step 3: Middleware — route protection via `auth.config.ts` authorized callback
+- [x] Step 4: Sign Out wired to `signOut({ callbackUrl: '/sign-in' })`
+- [x] Step 5: `SessionProvider` wrapper in `app/providers.tsx`
+- [x] Step 6: Root layout updated to wrap with `<Providers>`
+- [x] Step 7: Root page auth-aware redirect (`/dashboard` if session, `/sign-in` if not)
+- [x] Step 8: `tsconfig.json` excludes stray `gogo-vite-mui-admin-template-v7.4.0` folder
+- [x] Step 9: `pnpm build` passes clean — 8 routes, middleware 91.2 kB
+
+---
 
 ### ✅ Phase 1: Foundation & Layout
 
@@ -246,6 +276,9 @@
 - **Step 4 completed:** `components/layout/dashboard-layout.tsx` implemented — wraps `AppSidebar` + `TopNavbar`, dynamic `marginLeft` (240px/64px) via `useUIStore`, `pt-16` clears fixed navbar, `min-h-screen` fills viewport. `app/(dashboard)/layout.tsx` wires it to the route group. `app/(dashboard)/dashboard/page.tsx` placeholder created. Root `/` redirects to `/dashboard`. `pnpm build` passes clean.
 - **Step 5 completed:** 5 shared components in `components/shared/` — `PageHeader` (sticky top-16, title/description/action), `KPICard` (Card wrapper, value + trend + icon), `StatusBadge` (7 statuses mapped to token colors with dot indicator), `EmptyState` (centered icon/title/description/action), `DataTable` (generic scaffold, search input, rounded-xl table). `components/shared/.gitkeep` removed. Test page at `/test-components`. `pnpm build` passes clean — 7 routes.
 - **Steps 6 & 7 completed:** `app/(dashboard)/dashboard/page.tsx` fully implemented — `PageHeader` with description, 4 `KPICard`s in `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`, Quick Actions panel with 4 buttons. Page metadata added. `pnpm build` passes clean — Phase 1 complete.
+- **Phase 3 completed:** Participants module fully implemented. Key decisions: (1) `auditParticipation: z.boolean()` — removed `.default(false)` which caused resolver type mismatch between Zod v4 input/output types in `react-hook-form`. (2) API routes use `export const dynamic = 'force-dynamic'` + `Promise<params>` for Next.js 15. (3) `lib/db.ts` updated to Prisma v7 pattern — `PrismaPg` adapter from `@prisma/adapter-pg`; `new PrismaClient()` without adapter throws `PrismaClientInitializationError` in v7. (4) `prisma/schema.prisma` datasource has no `url` field in v7 — config is in `prisma.config.ts`. (5) `standardSchemaResolver` used for form validation (Zod v4 + `@hookform/resolvers` v5 incompatibility). Migration pending live DB; `pnpm build` passes clean — 9 routes.
+- **Phase 2 completed:** Sign-in page at `/sign-in` — `react-hook-form` + Zod v4 via `standardSchemaResolver` (Zod v4 + `@hookform/resolvers` v5 require `standard-schema` resolver, not `zodResolver`). Auth layout `app/(auth)/layout.tsx`. Middleware uses `NextAuth(authConfig).auth` — keeps Node.js-only modules out of Edge runtime. Sign Out wired to `signOut({ callbackUrl: '/sign-in' })` in `DropdownMenuItem`. `SessionProvider` in `app/providers.tsx` wraps root layout. Root page `async` with `auth()` session check → redirects to `/dashboard` or `/sign-in`. **Bonus fix:** `tsconfig.json` now excludes `gogo-vite-mui-admin-template-v7.4.0` (stray folder in project root was breaking TypeScript type-check). `pnpm build` passes clean — 8 routes, middleware 91.2 kB.
+- **UI enhanced with gradient KPI cards, shadows, and improved dashboard layout:** Gradient tokens added to `globals.css` (`--gradient-purple/teal/blue/red/orange-from/to`). `KPICard` updated with `variant` prop using `inline style` for gradients (code-standards compliant — no raw hex in components). Dashboard redesigned with dynamic greeting (`GreetingHeader` client component), 3-column layout, Compliance Tracker panel with progress bars, right sidebar (Shifts Today, Expiring Documents, This Week stats). `ui-context.md` updated with Gradient Backgrounds and Shadows & Elevation sections. `pnpm build` passes clean.
 
 ---
 
