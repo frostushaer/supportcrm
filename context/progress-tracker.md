@@ -4,19 +4,35 @@
 
 ## Current Phase
 
-**Phase 4: Next Module**
+**Phase 3 Enhanced: Participants Module (spec-09) — COMPLETE**
 
 ---
 
 ## Current Goal
 
-**TBD — Phase 3 complete.**
+**TBD — Phase 3 Enhanced complete. Ready for next module.**
 
 ---
 
 ## Completed
 
-### ✅ Phase 3: Participants Module
+### ✅ Phase 3 Enhanced: Participants Module — Full Feature Spec (spec-09)
+
+- [x] Step 1: Prisma schema expanded — 13 new models added: `CaseNote`, `Medication`, `ShiftNote`, `Task`, `Appointment`, `Goal`, `Like`, `Dislike`, `RiskAssessment`, `FormSubmission`, `FundingAllocation` + expanded `Participant` (20+ new fields) + updated `NDISPlan` and `Document`
+- [x] Step 2: `pnpm prisma generate` — Prisma Client regenerated with all new models
+- [x] Step 3: Zod validation schemas expanded — `participantSchema` + 5 new schemas: `caseNoteSchema`, `taskSchema`, `goalSchema`, `medicationSchema`, `appointmentSchema` (all use `.optional()` not `.default()` to avoid `standardSchemaResolver` type mismatch)
+- [x] Step 4: API routes — sub-entity CRUD routes created: `/api/participants/[id]/case-notes`, `/tasks`, `/goals`, `/medications`, `/appointments`, `/likes`, `/dislikes`
+- [x] Step 5: `[id]/route.ts` GET updated to include all 12 relations
+- [x] Step 6: TanStack Query hooks expanded — 10 new hooks: `useCaseNotes`, `useCreateCaseNote`, `useTasks`, `useCreateTask`, `useGoals`, `useCreateGoal`, `useMedications`, `useCreateMedication`, `useAppointments`, `useCreateAppointment`
+- [x] Step 7: List page — enhanced with Import button, Eye icon Quick View, service support filter, badge columns, formatted dates
+- [x] Step 8: `QuickViewSidebar` component — Sheet with participant snapshot + recent case notes
+- [x] Step 9: `ImportParticipantDialog` — drag & drop .xlsx upload with template download stub
+- [x] Step 10: `AddParticipantSheet` — rewritten as single-scroll form with all required fields
+- [x] Step 11: Profile page — 11 tabs: Overview (Quick Snapshot + Goals/Likes/Dislikes), Case Notes (table), Medication (table), Shift Notes, Tasks (stats + table), Funding, Forms, Documents, Risk Assessment, Appointments, Settings
+- [x] Step 12: All 5 dialogs wired with react-hook-form + standardSchemaResolver + toast feedback
+- [x] Step 13: `pnpm build` passes clean — 17 routes, 0 TypeScript errors
+
+### ✅ Phase 3: Participants Module (Original)
 
 - [x] Step 1: Prisma schema — `Participant`, `NDISPlan`, `Document`, `Note`, `ServiceAgreement` models + Region back-relation
 - [x] Step 2: `pnpm prisma generate` (no live DB; migration ready to run when DB available)

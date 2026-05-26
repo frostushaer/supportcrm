@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { participantSchema } from '@/lib/validations/participants';
 import { auth } from '@/lib/auth';
@@ -21,10 +22,19 @@ export async function GET(
       where: { id },
       include: {
         region: true,
-        ndisPlans: true,
-        documents: true,
-        notes: true,
-        serviceAgreements: true,
+        ndisPlans: { orderBy: { createdAt: 'desc' } },
+        documents: { orderBy: { createdAt: 'desc' } },
+        caseNotes: { orderBy: { date: 'desc' } },
+        medications: { orderBy: { createdAt: 'desc' } },
+        shiftNotes: { orderBy: { shiftDate: 'desc' } },
+        tasks: { orderBy: { createdAt: 'desc' } },
+        appointments: { orderBy: { appointmentDate: 'asc' } },
+        goals: { orderBy: { createdAt: 'desc' } },
+        likes: { orderBy: { createdAt: 'asc' } },
+        dislikes: { orderBy: { createdAt: 'asc' } },
+        riskAssessments: { orderBy: { createdAt: 'desc' } },
+        formSubmissions: { orderBy: { createdAt: 'desc' } },
+        fundingAllocations: { orderBy: { createdAt: 'desc' } },
       },
     });
 
@@ -63,7 +73,13 @@ export async function PATCH(
     });
 
     return NextResponse.json({ success: true, data: participant });
-  } catch {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues }, { status: 400 });
+    }
+    if ((error as { code?: string })?.code === 'P2025') {
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Failed to update participant' }, { status: 500 });
   }
 }

@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "gogo-vite-mui-admin-template-v7.4.0"]
+  "exclude": ["node_modules", "gogo-vite-mui-admin-template-v7.4.0", "next-shadcn-admin-dashboard-main"]
 }
