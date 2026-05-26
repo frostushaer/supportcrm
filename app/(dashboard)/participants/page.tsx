@@ -147,17 +147,17 @@ export default function ParticipantsPage() {
                         className="border-b border-[var(--color-border-subtle)] last:border-0 hover:bg-[var(--color-subtle)] transition-colors"
                       >
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
+                          <Link href={`/participants/${p.id}`} className="flex items-center gap-3 group">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-dim)] text-xs font-semibold text-[var(--color-primary)]">
                               {(p.firstName?.[0] ?? '?')}{(p.lastName?.[0] ?? '?')}
                             </div>
                             <div>
-                              <p className="font-medium text-[var(--color-text)]">
+                              <p className="font-medium text-[var(--color-text)] group-hover:text-[var(--color-primary)] group-hover:underline transition-colors">
                                 {p.firstName} {p.lastName}
                               </p>
                               <p className="text-xs font-mono text-[var(--color-text-muted)]">{p.ndisNumber}</p>
                             </div>
-                          </div>
+                          </Link>
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm text-[var(--color-text-secondary)]">{p.primaryPhoneNumber}</p>
