@@ -15,7 +15,6 @@
     "@prisma/client": "^7.8.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tanstack/react-query": "^5.100.11",
-    "@types/pg": "^8.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -42,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/pg": "^8.20.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

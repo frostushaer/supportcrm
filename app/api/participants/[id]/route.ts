@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { participantSchema } from '@/lib/validations/participants';
 import { auth } from '@/lib/auth';
@@ -72,7 +73,13 @@ export async function PATCH(
     });
 
     return NextResponse.json({ success: true, data: participant });
-  } catch {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues }, { status: 400 });
+    }
+    if ((error as { code?: string })?.code === 'P2025') {
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Failed to update participant' }, { status: 500 });
   }
 }

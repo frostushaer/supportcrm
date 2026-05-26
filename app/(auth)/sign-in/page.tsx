@@ -33,20 +33,22 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormData) => {
     setIsLoading(true);
     setError(null);
-
-    const result = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
-
-    setIsLoading(false);
-
-    if (result?.error) {
-      setError('Invalid email or password. Please try again.');
-    } else if (result?.ok) {
-      router.push('/dashboard');
-      router.refresh();
+    try {
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+      if (result?.error) {
+        setError('Invalid email or password. Please try again.');
+      } else if (result?.ok) {
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
