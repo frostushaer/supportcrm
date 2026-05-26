@@ -6,49 +6,55 @@ import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-// In-memory mock data store (for development without database)
-let mockParticipants = [
-  {
-    id: '1',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    ndisNumber: 'NDIS-2024-001',
-    status: 'Active',
-    serviceSupport: 'Core',
-    primaryEmailAddress: 'jane.smith@example.com',
-    primaryPhoneNumber: '0412 345 678',
-    secondaryPhoneNumber: null,
-    gender: 'Female',
-    dateOfBirth: '1990-05-15',
-    address: '123 Main St',
-    suburb: 'Melbourne',
-    state: 'Victoria',
-    postcode: '3000',
-    auditParticipation: true,
-    region: { id: 'region_1', name: 'Melbourne' },
-    createdAt: new Date('2024-01-15').toISOString(),
-  },
-  {
-    id: '2',
-    firstName: 'Mark',
-    lastName: 'Johnson',
-    ndisNumber: 'NDIS-2024-002',
-    status: 'Pending',
-    serviceSupport: 'Capacity Building',
-    primaryEmailAddress: 'mark.j@example.com',
-    primaryPhoneNumber: '0423 456 789',
-    secondaryPhoneNumber: null,
-    gender: 'Male',
-    dateOfBirth: '1985-08-20',
-    address: '456 High St',
-    suburb: 'Sydney',
-    state: 'New South Wales',
-    postcode: '2000',
-    auditParticipation: false,
-    region: { id: 'region_2', name: 'Sydney' },
-    createdAt: new Date('2024-02-20').toISOString(),
-  },
-];
+// Global singleton mock store — survives Next.js hot reloads
+const g = global as typeof global & { __mockParticipants?: any[] };
+if (!g.__mockParticipants) {
+  g.__mockParticipants = [
+    {
+      id: '1',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      ndisNumber: 'NDIS-2024-001',
+      status: 'Active',
+      serviceSupport: 'Core',
+      primaryEmailAddress: 'jane.smith@example.com',
+      primaryPhoneNumber: '0412345678',
+      secondaryPhoneNumber: null,
+      gender: 'Female',
+      dateOfBirth: '1990-05-15',
+      address: '123 Main St',
+      suburb: 'Melbourne',
+      state: 'Victoria',
+      postcode: '3000',
+      auditParticipation: true,
+      regionId: 'region_1',
+      region: { id: 'region_1', name: 'Melbourne' },
+      createdAt: new Date('2024-01-15').toISOString(),
+    },
+    {
+      id: '2',
+      firstName: 'Mark',
+      lastName: 'Johnson',
+      ndisNumber: 'NDIS-2024-002',
+      status: 'Pending',
+      serviceSupport: 'Capacity Building',
+      primaryEmailAddress: 'mark.j@example.com',
+      primaryPhoneNumber: '0423456789',
+      secondaryPhoneNumber: null,
+      gender: 'Male',
+      dateOfBirth: '1985-08-20',
+      address: '456 High St',
+      suburb: 'Sydney',
+      state: 'New South Wales',
+      postcode: '2000',
+      auditParticipation: false,
+      regionId: 'region_2',
+      region: { id: 'region_2', name: 'Sydney' },
+      createdAt: new Date('2024-02-20').toISOString(),
+    },
+  ];
+}
+const mockParticipants = g.__mockParticipants;
 
 export async function GET(req: NextRequest) {
   try {

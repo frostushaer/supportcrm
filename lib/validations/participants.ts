@@ -46,6 +46,7 @@ export const caseNoteSchema = z.object({
   timeSpent: z.string().optional(),
   howContacted: z.string().optional(),
   travelKm: z.string().optional(),
+  nonDirectSupport: z.string().optional(),
   billable: z.boolean().optional(),
   showToWorker: z.boolean().optional(),
 });

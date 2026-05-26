@@ -6,6 +6,9 @@ import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+const g = global as typeof global & { __mockParticipants?: any[] };
+const getMockStore = () => g.__mockParticipants ?? [];
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,25 +21,31 @@ export async function GET(
 
     const { id } = await params;
 
-    const participant = await db.participant.findUnique({
-      where: { id },
-      include: {
-        region: true,
-        ndisPlans: { orderBy: { createdAt: 'desc' } },
-        documents: { orderBy: { createdAt: 'desc' } },
-        caseNotes: { orderBy: { date: 'desc' } },
-        medications: { orderBy: { createdAt: 'desc' } },
-        shiftNotes: { orderBy: { shiftDate: 'desc' } },
-        tasks: { orderBy: { createdAt: 'desc' } },
-        appointments: { orderBy: { appointmentDate: 'asc' } },
-        goals: { orderBy: { createdAt: 'desc' } },
-        likes: { orderBy: { createdAt: 'asc' } },
-        dislikes: { orderBy: { createdAt: 'asc' } },
-        riskAssessments: { orderBy: { createdAt: 'desc' } },
-        formSubmissions: { orderBy: { createdAt: 'desc' } },
-        fundingAllocations: { orderBy: { createdAt: 'desc' } },
-      },
-    });
+    let participant;
+    try {
+      participant = await db.participant.findUnique({
+        where: { id },
+        include: {
+          region: true,
+          ndisPlans: { orderBy: { createdAt: 'desc' } },
+          documents: { orderBy: { createdAt: 'desc' } },
+          caseNotes: { orderBy: { date: 'desc' } },
+          medications: { orderBy: { createdAt: 'desc' } },
+          shiftNotes: { orderBy: { shiftDate: 'desc' } },
+          tasks: { orderBy: { createdAt: 'desc' } },
+          appointments: { orderBy: { appointmentDate: 'asc' } },
+          goals: { orderBy: { createdAt: 'desc' } },
+          likes: { orderBy: { createdAt: 'asc' } },
+          dislikes: { orderBy: { createdAt: 'asc' } },
+          riskAssessments: { orderBy: { createdAt: 'desc' } },
+          formSubmissions: { orderBy: { createdAt: 'desc' } },
+          fundingAllocations: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+    } catch {
+      // DB unavailable — look up from mock store
+      participant = getMockStore().find((p) => p.id === id) ?? null;
+    }
 
     if (!participant) {
       return NextResponse.json({ error: 'Participant not found' }, { status: 404 });

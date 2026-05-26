@@ -57,7 +57,7 @@ export function SearchDialog() {
     : searchItems;
 
   return (
-    <>
+    <div suppressHydrationWarning>
       <Button
         variant="link"
         onClick={() => handleOpenChange(true)}
@@ -100,6 +100,6 @@ export function SearchDialog() {
           </CommandList>
         </Command>
       </CommandDialog>
-    </>
+    </div>
   );
 }
