@@ -6,7 +6,7 @@ export function GreetingHeader() {
     hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
-    <div className="px-6 py-6">
+    <div>
       <h1 className="text-2xl font-semibold text-[var(--color-text)]">
         {greeting}! 👋
       </h1>

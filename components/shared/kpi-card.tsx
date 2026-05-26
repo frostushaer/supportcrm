@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 
 type KPICardVariant = 'default' | 'purple' | 'teal' | 'blue' | 'red' | 'orange';
 
@@ -27,21 +27,21 @@ export function KPICard({ title, value, trend, icon, variant = 'default' }: KPIC
 
   return (
     <Card
-      className={`border-[var(--color-border)] shadow-md transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-        isGradient ? 'border-transparent' : 'bg-[var(--color-surface)]'
+      className={`shadow-md transition-all duration-300 hover:shadow-lg ${
+        isGradient ? 'ring-0 border-transparent' : ''
       }`}
       style={gradientStyles[variant]}
     >
-      <div className="flex items-start justify-between px-6 py-6">
+      <CardContent className="flex items-start justify-between py-2">
         <div className="flex-1">
-          <p className={`text-sm font-medium ${isGradient ? 'text-white/80' : 'text-[var(--color-text-muted)]'}`}>
+          <p className={`text-sm font-medium ${isGradient ? 'text-white/80' : 'text-muted-foreground'}`}>
             {title}
           </p>
-          <p className={`mt-2 text-3xl font-semibold ${isGradient ? 'text-white' : 'text-[var(--color-text)]'}`}>
+          <p className={`mt-2 text-3xl font-bold ${isGradient ? 'text-white' : 'text-foreground'}`}>
             {value}
           </p>
           {trend && (
-            <p className={`mt-2 text-sm ${
+            <p className={`mt-1.5 text-xs ${
               isGradient
                 ? 'text-white/70'
                 : trend.positive
@@ -56,12 +56,12 @@ export function KPICard({ title, value, trend, icon, variant = 'default' }: KPIC
           <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
             isGradient
               ? 'bg-white/20 text-white'
-              : 'bg-[var(--color-primary-dim)] text-[var(--color-primary)]'
+              : 'bg-muted text-muted-foreground'
           }`}>
             {icon}
           </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }
