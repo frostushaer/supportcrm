@@ -10,11 +10,23 @@
 
 ## Current Goal
 
-**Ask a Question Module (spec-10) — COMPLETE**
+**Feedback Module (spec-11) — COMPLETE**
 
 ---
 
 ## Completed
+
+### ✅ Feedback Module — Full Feature Spec (spec-11)
+
+- [x] Step 1: Prisma schema — `Feedback` model added
+- [x] Step 2: Validation schema — `lib/validations/feedback.ts`
+- [x] Step 3: API routes — `GET/POST /api/feedback`, `GET/PATCH/DELETE /api/feedback/[id]`
+- [x] Step 4: TanStack Query hooks — `useFeedbacks`, `useFeedback`, `useCreateFeedback`, `useUpdateFeedback`, `useDeleteFeedback`
+- [x] Step 5: Main page — `/feedback` with DataTable, filters, search, empty state
+- [x] Step 6: Dialogs — `AddFeedbackDialog`, `FeedbackInfoDialog` (with status change dropdown), `EditFeedbackDialog`
+- [x] Step 7: Migration generated (pending DB reset) and `pnpm build` passes clean.
+
+---
 
 ### ✅ Ask a Question Module — Full Feature Spec (spec-10)
 
