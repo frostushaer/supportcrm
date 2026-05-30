@@ -536,3 +536,97 @@ model FundingAllocation {
 ## API Routes
 
 **New endpoints needed:**
+POST /api/participants # Create
+GET /api/participants # List with filters
+GET /api/participants/[id] # Single
+PATCH /api/participants/[id] # Update
+DELETE /api/participants/[id] # Delete
+
+POST /api/participants/import # Bulk import from XLSX
+
+POST /api/participants/[id]/case-notes
+GET /api/participants/[id]/case-notes
+PATCH /api/participants/[id]/case-notes/[noteId]
+DELETE /api/participants/[id]/case-notes/[noteId]
+
+POST /api/participants/[id]/medications
+GET /api/participants/[id]/medications
+
+POST /api/participants/[id]/shift-notes
+GET /api/participants/[id]/shift-notes
+
+POST /api/participants/[id]/tasks
+GET /api/participants/[id]/tasks
+PATCH /api/participants/[id]/tasks/[taskId]
+
+POST /api/participants/[id]/appointments
+GET /api/participants/[id]/appointments
+
+POST /api/participants/[id]/goals
+GET /api/participants/[id]/goals
+PATCH /api/participants/[id]/goals/[goalId]
+DELETE /api/participants/[id]/goals/[goalId]
+
+POST /api/participants/[id]/likes
+GET /api/participants/[id]/likes
+DELETE /api/participants/[id]/likes/[likeId]
+
+POST /api/participants/[id]/dislikes
+GET /api/participants/[id]/dislikes
+DELETE /api/participants/[id]/dislikes/[dislikeId]
+
+POST /api/participants/[id]/documents
+GET /api/participants/[id]/documents
+DELETE /api/participants/[id]/documents/[docId]
+
+POST /api/participants/[id]/risk-assessments
+GET /api/participants/[id]/risk-assessments
+
+POST /api/participants/[id]/form-submissions
+GET /api/participants/[id]/form-submissions
+
+GET /api/participants/[id]/funding
+POST /api/participants/[id]/funding
+
+
+---
+
+## Implementation Order
+
+1. **Database**: Run migration with all 14 models
+2. **API Routes**: Build all CRUD endpoints
+3. **TanStack Query Hooks**: Create hooks for each entity
+4. **List Page**: Table + filters + Quick View sidebar
+5. **Add New Participant Sheet**: Multi-field form
+6. **Import Dialog**: XLSX upload functionality
+7. **Profile Overview Tab**: Quick Snapshot + Goals/Likes/Dislikes
+8. **Profile Settings Tab**: All configuration fields
+9. **Profile Case Notes Tab**: Rich text editor + table
+10. **Profile Remaining Tabs**: Tasks, Medication, Shift Notes, etc.
+
+---
+
+## Success Criteria
+
+- [ ] All 14 database models created
+- [ ] List page with filters + Quick View working
+- [ ] Import XLSX functionality works
+- [ ] Add New Participant form validates and creates
+- [ ] Profile page loads with all 11 tabs
+- [ ] Overview tab displays Quick Snapshot + Goals
+- [ ] Settings tab allows full participant configuration
+- [ ] Case Notes supports rich text + attachments
+- [ ] Tasks tab shows calendar + list views
+- [ ] All CRUD operations work for each sub-entity
+- [ ] pnpm build passes with 0 errors
+
+---
+
+## Notes
+
+- Based on 24 Vertex360 screenshots provided
+- Matches exact UI/UX patterns from reference
+- Respects all color tokens and design system
+- Region filter applies to all queries
+- All forms use react-hook-form + Zod validation
+- File uploads need Vercel Blob or S3 integration

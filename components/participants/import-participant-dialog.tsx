@@ -14,6 +14,7 @@ interface ValidationError {
 interface ImportResult {
   success: boolean;
   imported: number;
+  skipped?: number;
   errors: ValidationError[];
   message: string;
 }
@@ -91,18 +92,28 @@ export function ImportParticipantDialog({ open, onOpenChange }: ImportParticipan
       
       // Success
       if (result.errors && result.errors.length > 0) {
-        // Partial success with some errors
+        // Partial success with validation errors
         toast.success(result.message);
         setErrors(result.errors);
+      } else if (result.imported === 0 && result.skipped && result.skipped > 0) {
+        // All duplicates - show info message
+        toast.info(result.message);
+        // Close dialog since there's nothing to fix
+        setTimeout(() => {
+          onOpenChange(false);
+          setFile(null);
+          setSupportedFormat(false);
+          setErrors([]);
+        }, 2000);
       } else {
-        // Complete success
-        toast.success(`Successfully imported ${result.imported} participant(s)!`);
+        // Complete success with new imports
+        toast.success(result.message || `Successfully imported ${result.imported} participant(s)!`);
       }
       
       // Refresh participants list
       queryClient.invalidateQueries({ queryKey: ['participants'] });
       
-      // Close dialog after a short delay if no errors
+      // Close dialog after a short delay if no validation errors
       if (!result.errors || result.errors.length === 0) {
         setTimeout(() => {
           onOpenChange(false);

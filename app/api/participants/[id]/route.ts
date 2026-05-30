@@ -6,6 +6,7 @@ import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const g = global as typeof global & { __mockParticipants?: any[] };
 const getMockStore = () => g.__mockParticipants ?? [];
 

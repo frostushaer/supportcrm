@@ -1,7 +1,8 @@
 'use client';
 
-import React, { use, useState } from 'react';
+import React, { Fragment, use, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Calendar, FileText, Mail, MapPin, Phone, Plus, Shield,
   User, Pill, ClipboardList, DollarSign, BarChart2, FolderOpen,
@@ -30,16 +31,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { InitialAssessmentForm } from '@/components/participants/initial-assessment-form';
 import {
   useParticipant,
   useCaseNotes,
   useCreateCaseNote,
+  useUpdateCaseNote,
+  useDeleteCaseNote,
   useTasks,
   useCreateTask,
   useGoals,
   useCreateGoal,
+  useUpdateGoal,
+  useDeleteGoal,
   useMedications,
   useCreateMedication,
+  useUpdateMedication,
+  useDeleteMedication,
   useAppointments,
   useCreateAppointment,
 } from '@/hooks/use-participants';
@@ -58,6 +66,150 @@ import {
 
 type Params = Promise<{ id: string }>;
 
+const RISK_QUESTIONS = [
+  'Is there a risk of falls or physical injury?',
+  'Is there a risk of self-harm or harm to others?',
+  'Is there a risk related to medication management?',
+  'Is there a risk of financial abuse or exploitation?',
+  'Is there a risk related to community access safety?',
+  'Is there a risk of elopement or missing person?',
+  'Is there a risk related to nutrition or hydration?',
+  'Is there a risk of environmental hazards at home?',
+];
+const LIKELIHOOD_OPTS = ['Rare','Unlikely','Possible','Likely','Almost Certain'];
+const IMPACT_OPTS = ['Insignificant','Minor','Moderate','Major','Catastrophic'];
+const STATUS_OPTS = ['Open','Monitored','Resolved','Escalated'];
+
+function computeRating(likelihood: string, impact: string): string {
+  const l = LIKELIHOOD_OPTS.indexOf(likelihood);
+  const i = IMPACT_OPTS.indexOf(impact);
+  if (l < 0 || i < 0) return '—';
+  const score = (l + 1) * (i + 1);
+  if (score >= 15) return 'Extreme';
+  if (score >= 8) return 'High';
+  if (score >= 4) return 'Medium';
+  return 'Low';
+}
+
+function RiskAssessmentFormDialog({ onClose, onSubmit }: {
+  onClose: () => void;
+  onSubmit: (rows: {question: string; status: string; likelihood: string; impact: string; rating: string}[]) => void;
+}) {
+  const [rows, setRows] = useState(
+    RISK_QUESTIONS.map(q => ({ question: q, status: 'Open', likelihood: 'Rare', impact: 'Insignificant', rating: 'Low' }))
+  );
+
+  const updateRow = (i: number, field: 'status' | 'likelihood' | 'impact', val: string) => {
+    setRows(prev => prev.map((r, idx) => {
+      if (idx !== i) return r;
+      const updated = { ...r, [field]: val };
+      updated.rating = computeRating(
+        field === 'likelihood' ? val : updated.likelihood,
+        field === 'impact' ? val : updated.impact
+      );
+      return updated;
+    }));
+  };
+
+  const ratingColor = (r: string) =>
+    r === 'Extreme' ? 'text-red-700 bg-red-100' :
+    r === 'High' ? 'text-orange-600 bg-orange-100' :
+    r === 'Medium' ? 'text-yellow-600 bg-yellow-100' :
+    'text-green-600 bg-green-100';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-4xl max-h-[90vh] flex flex-col bg-[var(--color-bg)] rounded-xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-[var(--color-primary)]">
+          <div>
+            <h2 className="text-base font-semibold text-white">Risk Assessment Form</h2>
+            <p className="text-[11px] text-white/70">Evaluate and record participant risk factors</p>
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 px-6 py-2.5 bg-[var(--color-subtle)] border-b border-[var(--color-border)] text-xs">
+          <span className="font-medium text-[var(--color-text-muted)]">Risk Rating:</span>
+          {[['Low','text-green-600 bg-green-100'],['Medium','text-yellow-600 bg-yellow-100'],['High','text-orange-600 bg-orange-100'],['Extreme','text-red-700 bg-red-100']].map(([l, c]) => (
+            <span key={l} className={`px-2 py-0.5 rounded-full font-medium ${c}`}>{l}</span>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-[var(--color-surface)] z-10">
+              <tr className="border-b border-[var(--color-border)]">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)] w-[35%]">Question / Risk</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]">Likelihood</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]">Impact</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-muted)]">Risk Rating</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]">
+              {rows.map((row, i) => (
+                <tr key={i} className="hover:bg-[var(--color-subtle)]">
+                  <td className="px-4 py-3 text-xs text-[var(--color-text)] leading-relaxed">{row.question}</td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={row.status}
+                      onChange={e => updateRow(i, 'status', e.target.value)}
+                      className="h-8 w-32 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 text-xs text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      {STATUS_OPTS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={row.likelihood}
+                      onChange={e => updateRow(i, 'likelihood', e.target.value)}
+                      className="h-8 w-36 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 text-xs text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      {LIKELIHOOD_OPTS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={row.impact}
+                      onChange={e => updateRow(i, 'impact', e.target.value)}
+                      className="h-8 w-36 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 text-xs text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                    >
+                      {IMPACT_OPTS.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${ratingColor(row.rating)}`}>
+                      {row.rating}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+          <button onClick={onClose} className="h-9 px-4 text-sm font-medium rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(rows)}
+            className="h-9 px-5 text-sm font-medium rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 transition-colors"
+          >
+            Save Risk Assessment
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -67,9 +219,12 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-function SnapshotCell({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string | null }) {
+function SnapshotCell({ icon: Icon, label, value, onAddInfo }: { icon: React.ElementType; label: string; value?: string | null; onAddInfo?: () => void }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5">
+    <div
+      className={`flex flex-col gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5 ${!value && onAddInfo ? 'cursor-pointer hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-dim)] transition-colors' : ''}`}
+      onClick={!value && onAddInfo ? onAddInfo : undefined}
+    >
       <div className="flex items-center gap-1.5">
         <Icon className="h-3 w-3 text-[var(--color-primary)]" />
         <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{label}</span>
@@ -135,6 +290,10 @@ function PriorityBadge({ priority }: { priority: string }) {
 
 export default function ParticipantProfilePage({ params }: { params: Params }) {
   const { id } = use(params);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? 'overview';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const { data: participant, isLoading, isError } = useParticipant(id);
   const { data: caseNotes } = useCaseNotes(id);
   const { data: tasks } = useTasks(id);
@@ -143,24 +302,52 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
   const { data: appointments } = useAppointments(id);
 
   const { mutate: createCaseNote, isPending: creatingNote } = useCreateCaseNote(id);
+  const { mutate: updateCaseNote, isPending: updatingNote } = useUpdateCaseNote(id);
+  const { mutate: deleteCaseNote, isPending: deletingNote } = useDeleteCaseNote(id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editingNote, setEditingNote] = useState<any | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const editNoteForm = useForm<CaseNoteFormData>();
   const { mutate: createTask, isPending: creatingTask } = useCreateTask(id);
   const { mutate: createGoal, isPending: creatingGoal } = useCreateGoal(id);
+  const { mutate: updateGoal, isPending: updatingGoal } = useUpdateGoal(id);
+  const { mutate: deleteGoal, isPending: deletingGoal } = useDeleteGoal(id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editingGoal, setEditingGoal] = useState<any | null>(null);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+  const [goalMenuOpen, setGoalMenuOpen] = useState<string | null>(null);
+  const editGoalForm = useForm<GoalFormData>({ resolver: standardSchemaResolver(goalSchema), defaultValues: { progress: 0 } });
   const { mutate: createMedication, isPending: creatingMed } = useCreateMedication(id);
+  const { mutate: updateMedication, isPending: updatingMed } = useUpdateMedication(id);
+  const { mutate: deleteMedication, isPending: deletingMed } = useDeleteMedication(id);
   const { mutate: createAppointment, isPending: creatingAppt } = useCreateAppointment(id);
 
+  const [medPlanOpen, setMedPlanOpen] = useState(false);
+  const [deleteMedDialogOpen, setDeleteMedDialogOpen] = useState(false);
+  const [deletingMedId, setDeletingMedId] = useState<string | null>(null);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [editNoteDialogOpen, setEditNoteDialogOpen] = useState(false);
+  const [deleteNoteDialogOpen, setDeleteNoteDialogOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [editGoalDialogOpen, setEditGoalDialogOpen] = useState(false);
+  const [deleteGoalDialogOpen, setDeleteGoalDialogOpen] = useState(false);
   const [medDialogOpen, setMedDialogOpen] = useState(false);
+  const [expandedMedId, setExpandedMedId] = useState<string | null>(null);
+  const [editingMedication, setEditingMedication] = useState<typeof medications extends (infer T)[] ? T : never | null>(null);
   const [apptDialogOpen, setApptDialogOpen] = useState(false);
   const [docDialogOpen, setDocDialogOpen] = useState(false);
   const [riskMgtOpen, setRiskMgtOpen] = useState(false);
   const [riskRatingOpen, setRiskRatingOpen] = useState(false);
   const [riskMitigationOpen, setRiskMitigationOpen] = useState(false);
+  const [assessmentFormOpen, setAssessmentFormOpen] = useState(false);
+  const [riskFormOpen, setRiskFormOpen] = useState(false);
+  const [riskRows, setRiskRows] = useState<{question: string; status: string; likelihood: string; impact: string; rating: string}[]>([]);
   const [taskView, setTaskView] = useState<'list' | 'calendar'>('list');
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const noteForm = useForm<CaseNoteFormData>({ resolver: standardSchemaResolver(caseNoteSchema) });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const taskForm = useForm<TaskFormData>({ resolver: standardSchemaResolver(taskSchema), defaultValues: { priority: 'Medium', status: 'Pending' } });
   const goalForm = useForm<GoalFormData>({ resolver: standardSchemaResolver(goalSchema), defaultValues: { progress: 0 } });
   const medForm = useForm<MedicationFormData>({ resolver: standardSchemaResolver(medicationSchema) });
@@ -190,39 +377,67 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-4">
-        <div className="mb-3">
-          <Link href="/participants" className="inline-flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 pt-3 pb-0">
+        {/* Back link */}
+        <div className="mb-2">
+          <Link href="/participants" className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back to Participants
           </Link>
         </div>
-        <div className="flex items-center justify-between">
+
+        {/* Profile row */}
+        <div className="flex items-center justify-between gap-4 pb-3">
+          {/* Avatar + name/email */}
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-primary-dim)] text-lg font-bold text-[var(--color-primary)]">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xl font-bold text-white shadow">
               {initials}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-[var(--color-text)]">
-                  {participant.firstName} {participant.lastName}
-                </h1>
-                <StatusBadge status={participant.status.toLowerCase() as 'active' | 'inactive'} />
-              </div>
-              <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
-                NDIS: <span className="font-mono">{participant.ndisNumber}</span>
-                {' · '}{participant.serviceSupport}
-                {' · '}{participant.region?.name}
+              <h1 className="text-xl font-bold text-[var(--color-text)] leading-tight">
+                {participant.firstName} {participant.lastName}
+              </h1>
+              <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+                {participant.primaryEmailAddress}
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm">Edit Profile</Button>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 text-xs font-medium"
+              onClick={() => setMedPlanOpen(true)}
+            >
+              <Pill className="h-3.5 w-3.5" />
+              View Medication Plan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 text-xs font-medium"
+              onClick={() => window.print()}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Print Support Plan
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 gap-1.5 text-xs font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white"
+              onClick={() => setActiveTab('case-notes')}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Case Notes
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex-1 px-6 py-4 min-h-0">
-        <Tabs defaultValue="overview" className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <TabsList variant="line" className="mb-6 h-10 w-full max-w-full overflow-x-auto scrollbar-hide whitespace-nowrap [&>button]:inline-flex [&>button]:shrink-0">
             <TabsTrigger value="overview"><User className="mr-1.5 h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="case-notes"><ClipboardList className="mr-1.5 h-3.5 w-3.5" />Case Notes</TabsTrigger>
@@ -249,28 +464,28 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                       <h3 className="text-sm font-semibold text-white">Quick Snapshot</h3>
                       <p className="text-[11px] text-white/60">Essential participant information</p>
                     </div>
-                    <Button size="sm" variant="secondary" className="text-xs h-7">
+                    <Button size="sm" variant="secondary" className="text-xs h-7" onClick={() => setActiveTab('settings')}>
                       Add information ↗
                     </Button>
                   </div>
                   <div className="bg-[var(--color-surface)] grid grid-cols-3 gap-1.5 p-2">
-                    <SnapshotCell icon={MapPin} label="Address" value={[participant.address, participant.suburb, participant.state, participant.postcode].filter(Boolean).join(', ')} />
-                    <SnapshotCell icon={User} label="Primary Disability" value={null} />
-                    <SnapshotCell icon={AlertTriangle} label="Emergency Contact Name" value={participant.emergencyContactName} />
-                    <SnapshotCell icon={Phone} label="Emergency Phone" value={participant.emergencyContactNumber} />
-                    <SnapshotCell icon={Phone} label="Participant Phone" value={participant.primaryPhoneNumber} />
-                    <SnapshotCell icon={Mail} label="Participant Email" value={participant.primaryEmailAddress} />
-                    <SnapshotCell icon={Shield} label="NDIS No." value={participant.ndisNumber} />
-                    <SnapshotCell icon={Calendar} label="Date of Birth" value={participant.dateOfBirth ? new Date(participant.dateOfBirth).toLocaleDateString('en-AU') : null} />
-                    <SnapshotCell icon={Calendar} label="Service Start Date" value={participant.serviceStartDate ? new Date(participant.serviceStartDate).toLocaleDateString('en-AU') : null} />
-                    <SnapshotCell icon={Calendar} label="Service End Date" value={participant.serviceEndDate ? new Date(participant.serviceEndDate).toLocaleDateString('en-AU') : null} />
-                    <SnapshotCell icon={User} label="Public Guardian" value={null} />
-                    <SnapshotCell icon={Shield} label="Child Safety Officer" value={null} />
-                    <SnapshotCell icon={User} label="Plan Nominee" value={participant.planNominee} />
-                    <SnapshotCell icon={User} label="External Coordinator Name" value={participant.externalCoordinatorName} />
-                    <SnapshotCell icon={Mail} label="External Coordinator Email" value={participant.externalCoordinatorEmail} />
-                    <SnapshotCell icon={Phone} label="External Coordinator Phone" value={participant.externalCoordinatorPhone} />
-                    <SnapshotCell icon={User} label="External Coordinator Company" value={participant.externalCoordinatorCompany} />
+                    <SnapshotCell icon={MapPin} label="Address" value={[participant.address, participant.suburb, participant.state, participant.postcode].filter(Boolean).join(', ')} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={User} label="Primary Disability" value={null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={AlertTriangle} label="Emergency Contact Name" value={participant.emergencyContactName} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Phone} label="Emergency Phone" value={participant.emergencyContactNumber} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Phone} label="Participant Phone" value={participant.primaryPhoneNumber} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Mail} label="Participant Email" value={participant.primaryEmailAddress} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Shield} label="NDIS No." value={participant.ndisNumber} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Calendar} label="Date of Birth" value={participant.dateOfBirth ? new Date(participant.dateOfBirth).toLocaleDateString('en-AU') : null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Calendar} label="Service Start Date" value={participant.serviceStartDate ? new Date(participant.serviceStartDate).toLocaleDateString('en-AU') : null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Calendar} label="Service End Date" value={participant.serviceEndDate ? new Date(participant.serviceEndDate).toLocaleDateString('en-AU') : null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={User} label="Public Guardian" value={null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Shield} label="Child Safety Officer" value={null} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={User} label="Plan Nominee" value={participant.planNominee} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={User} label="External Coordinator Name" value={participant.externalCoordinatorName} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Mail} label="External Coordinator Email" value={participant.externalCoordinatorEmail} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={Phone} label="External Coordinator Phone" value={participant.externalCoordinatorPhone} onAddInfo={() => setActiveTab('settings')} />
+                    <SnapshotCell icon={User} label="External Coordinator Company" value={participant.externalCoordinatorCompany} onAddInfo={() => setActiveTab('settings')} />
                   </div>
                 </div>
               </div>
@@ -295,16 +510,61 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                         <p className="text-xs text-center text-[var(--color-text-muted)] py-3">No goals added yet.</p>
                       ) : (
                         <div className="space-y-2">
-                          {goals.map((g: { id: string; description: string; goalType: string; progress: number }) => (
-                            <div key={g.id} className="rounded-lg border border-[var(--color-border)] p-2.5">
+                          {goals.map((g: { id: string; description: string; goalType: string; progress: number; achievementNotes?: string; hurdles?: string }) => (
+                            <div key={g.id} className="rounded-lg border border-[var(--color-border)] p-2.5 relative">
                               <div className="flex items-start justify-between gap-2">
-                                <p className="text-xs text-[var(--color-text)]">{g.description}</p>
-                                <Badge variant="secondary" className="shrink-0 text-[10px]">{g.goalType}</Badge>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="text-[var(--color-primary)] text-xs">●</span>
+                                  <p className="text-xs text-[var(--color-text)] truncate">{g.description}</p>
+                                </div>
+                                <div className="relative shrink-0">
+                                  <button
+                                    onClick={() => setGoalMenuOpen(goalMenuOpen === g.id ? null : g.id)}
+                                    className="p-1 rounded hover:bg-[var(--color-subtle)] text-[var(--color-text-muted)]"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                  </button>
+                                  {goalMenuOpen === g.id && (
+                                    <div className="absolute right-0 top-7 z-50 min-w-[110px] rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] shadow-lg py-1">
+                                      <button
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--color-subtle)] text-[var(--color-text)]"
+                                        onClick={() => {
+                                          setEditingGoal(g);
+                                          editGoalForm.reset({
+                                            description: g.description,
+                                            goalType: g.goalType as GoalFormData['goalType'],
+                                            progress: g.progress,
+                                            achievementNotes: g.achievementNotes ?? '',
+                                            hurdles: g.hurdles ?? '',
+                                          });
+                                          setGoalMenuOpen(null);
+                                          setEditGoalDialogOpen(true);
+                                        }}
+                                      >
+                                        <svg className="w-3 h-3 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        Edit
+                                      </button>
+                                      <button
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--color-subtle)] text-red-500"
+                                        onClick={() => {
+                                          setDeletingGoalId(g.id);
+                                          setGoalMenuOpen(null);
+                                          setDeleteGoalDialogOpen(true);
+                                        }}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="mt-1.5">
-                                <div className="h-1 rounded-full bg-[var(--color-subtle)]">
+                              <div className="mt-2 flex items-center gap-2">
+                                <Badge variant="secondary" className="shrink-0 text-[10px]">{g.goalType}</Badge>
+                                <div className="flex-1 h-1 rounded-full bg-[var(--color-subtle)]">
                                   <div className="h-1 rounded-full bg-[var(--color-primary)]" style={{ width: `${g.progress}%` }} />
                                 </div>
+                                <span className="text-[10px] text-[var(--color-text-muted)]">{g.progress}%</span>
                               </div>
                             </div>
                           ))}
@@ -354,20 +614,28 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
               {/* ── Support Plan ── */}
               <div className="col-span-1 lg:col-span-3 w-full">
                 <div className="rounded-xl overflow-hidden border border-[var(--color-border)]">
-                  <div className="bg-[var(--color-primary)] px-4 py-3">
-                    <h3 className="text-sm font-semibold text-white">Support Plan</h3>
-                    <p className="text-[11px] text-white/60">Comprehensive support plan information</p>
+                  <div className="flex items-center justify-between bg-[var(--color-primary)] px-4 py-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Support Plan</h3>
+                      <p className="text-[11px] text-white/60">Comprehensive support plan information</p>
+                    </div>
+                    <Button size="sm" variant="secondary" className="text-xs h-7" onClick={() => setAssessmentFormOpen(true)}>
+                      Add information ↗
+                    </Button>
                   </div>
                   <div className="bg-[var(--color-surface)] p-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      <SnapshotCell icon={Calendar} label="Date of Birth" value={participant.dateOfBirth ? new Date(participant.dateOfBirth).toLocaleDateString('en-AU') : null} />
-                      <SnapshotCell icon={Shield} label="NDIS Plan" value={participant.ndisPlans?.[0]?.managementStyle} />
+                      <SnapshotCell icon={Calendar} label="Date of Birth" value={participant.dateOfBirth ? new Date(participant.dateOfBirth).toLocaleDateString('en-AU') : null} onAddInfo={() => setAssessmentFormOpen(true)} />
+                      <SnapshotCell icon={Shield} label="NDIS Plan" value={participant.ndisPlans?.[0]?.managementStyle} onAddInfo={() => setAssessmentFormOpen(true)} />
                     </div>
-                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        To add information on Support Plan, Please submit initial assessment form
+                    <button
+                      onClick={() => setAssessmentFormOpen(true)}
+                      className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-left hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-dim)] transition-colors group"
+                    >
+                      <p className="text-xs text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]">
+                        To add information on Support Plan, Please submit initial assessment form →
                       </p>
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -380,7 +648,7 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                       <h3 className="text-sm font-semibold text-white">Risk Assessment</h3>
                       <p className="text-[11px] text-white/60">Participant risk evaluation</p>
                     </div>
-                    <Button size="sm" variant="secondary" className="h-7 text-xs">Select Form</Button>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={() => setRiskFormOpen(true)}>Select Form</Button>
                   </div>
                   <div className="bg-[var(--color-surface)]">
                     <div className="overflow-x-auto">
@@ -395,11 +663,26 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center">
-                              <span className="text-xs text-[var(--color-error)]">Please select risk form!</span>
-                            </td>
-                          </tr>
+                          {riskRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-6 text-center">
+                                <span className="text-xs text-[var(--color-error)]">Please select risk form!</span>
+                              </td>
+                            </tr>
+                          ) : (
+                            riskRows.map((row, i) => {
+                              const ratingColor = row.rating === 'High' || row.rating === 'Extreme' ? 'text-red-600 bg-red-50' : row.rating === 'Medium' ? 'text-yellow-600 bg-yellow-50' : 'text-green-600 bg-green-50';
+                              return (
+                                <tr key={i} className="border-t border-[var(--color-border)] hover:bg-[var(--color-subtle)]">
+                                  <td className="px-4 py-3 text-xs text-[var(--color-text)]">{row.question}</td>
+                                  <td className="px-4 py-3 text-xs text-[var(--color-text)]">{row.status}</td>
+                                  <td className="px-4 py-3 text-xs text-[var(--color-text)]">{row.likelihood}</td>
+                                  <td className="px-4 py-3 text-xs text-[var(--color-text)]">{row.impact}</td>
+                                  <td className="px-4 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ratingColor}`}>{row.rating}</span></td>
+                                </tr>
+                              );
+                            })
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -425,133 +708,160 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                     <h3 className="text-base font-semibold text-[var(--color-text)]">Add Case Note</h3>
                   </div>
 
-                  <form className="p-6 space-y-5" onSubmit={(e) => { e.preventDefault(); setNoteDialogOpen(true); }}>
-                    {/* Subject */}
-                    <div>
-                      <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Subject Line</label>
-                      <Input 
-                        placeholder="Enter subject..." 
-                        className="w-full h-11 bg-[var(--color-surface)] border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
-                        {...noteForm.register('subject')}
-                      />
-                    </div>
+                  <form className="p-5 space-y-3" onSubmit={noteForm.handleSubmit((data) => {
+                    const formData = { ...data, attachment: selectedFile };
+                    createCaseNote(formData as Record<string, unknown>, {
+                      onSuccess: () => { toast.success('Case note added'); noteForm.reset(); setSelectedFile(null); },
+                      onError: () => toast.error('Failed to add case note'),
+                    });
+                  })}>
+                    {/* Subject Line */}
+                    <Input
+                      placeholder="Subject Line"
+                      className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] text-sm"
+                      {...noteForm.register('subject')}
+                    />
 
                     {/* Rich Text Editor */}
-                    <div>
-                      <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Case Note</label>
-                      <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface)] shadow-sm">
-                        {/* Toolbar */}
-                        <div className="flex items-center gap-1 px-3 py-2.5 border-b border-[var(--color-border)] bg-[var(--color-subtle)]">
-                          <select className="text-xs bg-[var(--color-bg)] border border-[var(--color-border)] rounded px-2 py-1 outline-none text-[var(--color-text)] hover:border-[var(--color-primary)] transition-colors">
-                            <option>Paragraph</option>
-                            <option>Heading 1</option>
-                            <option>Heading 2</option>
-                          </select>
-                          <div className="w-px h-5 bg-[var(--color-border)] mx-2" />
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] font-bold transition-colors" title="Bold">B</button>
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] italic transition-colors" title="Italic">I</button>
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] underline transition-colors" title="Underline">U</button>
-                          <div className="w-px h-5 bg-[var(--color-border)] mx-2" />
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] transition-colors" title="Bullet list">•</button>
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] transition-colors" title="Numbered list">1.</button>
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] transition-colors" title="Quote">"</button>
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text)] transition-colors" title="Code">&lt;/&gt;</button>
-                          <div className="flex-1" />
-                          <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded-md text-[var(--color-text-muted)] transition-colors" title="More options">⋮</button>
-                        </div>
-                        <Textarea 
-                          placeholder="Enter case note here..." 
-                          className="border-0 rounded-none min-h-[140px] resize-none bg-transparent px-4 py-3 text-sm"
-                          {...noteForm.register('content')}
-                        />
+                    <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-surface)]">
+                      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-subtle)] flex-wrap">
+                        <select className="text-xs bg-transparent border border-[var(--color-border)] rounded px-2 py-0.5 outline-none text-[var(--color-text)] mr-1">
+                          <option>Paragraph</option>
+                          <option>Heading 1</option>
+                          <option>Heading 2</option>
+                        </select>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] font-bold text-sm transition-colors" title="Bold">B</button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] italic text-sm transition-colors" title="Italic">I</button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-sm transition-colors" title="Link">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-sm transition-colors" title="Bullet list">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-sm transition-colors" title="Numbered list">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-sm transition-colors" title="Image">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth={2}/><circle cx="8.5" cy="8.5" r="1.5" strokeWidth={2}/><polyline points="21 15 16 10 5 21" strokeWidth={2}/></svg>
+                        </button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-xs font-mono transition-colors" title="Quote">&ldquo;&rdquo;</button>
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text)] text-xs font-mono transition-colors" title="Table">⊞</button>
+                        <div className="flex-1" />
+                        <button type="button" className="p-1.5 hover:bg-[var(--color-bg)] rounded text-[var(--color-text-muted)] text-sm transition-colors" title="More options">⋮</button>
                       </div>
+                      <Textarea
+                        placeholder="Enter case note here..."
+                        className="border-0 rounded-none min-h-[120px] resize-none bg-transparent px-3 py-2.5 text-sm focus-visible:ring-0"
+                        {...noteForm.register('content')}
+                      />
                     </div>
 
                     {/* Date */}
                     <div>
-                      <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Date</label>
-                      <Input 
-                        type="date" 
+                      <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Date</label>
+                      <Input
+                        type="date"
                         defaultValue={new Date().toISOString().split('T')[0]}
-                        className="w-full h-11 bg-[var(--color-surface)] border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+                        className="h-10 w-full bg-[var(--color-surface)] border-[var(--color-border)] text-sm"
                         {...noteForm.register('date')}
                       />
                     </div>
 
-                    {/* File Upload */}
-                    <div className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-5 text-center bg-[var(--color-subtle)] hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] transition-all cursor-pointer group">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-[var(--color-primary-dim)] flex items-center justify-center group-hover:bg-[var(--color-primary)] transition-colors">
-                          <svg className="w-5 h-5 text-[var(--color-primary)] group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                        </div>
-                        <p className="text-xs text-[var(--color-text-muted)]">PDF, DOC, DOCX, CSV, XLSX, XLS, PNG, JPG, JPEG, GIF, ZIP <span className="text-[var(--color-primary)] font-medium">up to 5MB</span></p>
-                      </div>
+                    {/* File Attachment — inline row */}
+                    <label className="flex items-center gap-2 h-10 px-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] cursor-pointer hover:border-[var(--color-primary)] transition-colors group">
+                      <svg className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      <span className="text-xs text-[var(--color-text)] truncate flex-1">
+                        {selectedFile ? selectedFile.name : 'PDF, DOC, DOCX, CSV, XLSX, XLS, PNG, JPG, JPEG, GIF, ZIP up to 5MB'}
+                      </span>
+                      {selectedFile && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); setSelectedFile(null); }}
+                          className="p-1 rounded hover:bg-[var(--color-subtle)] text-[var(--color-text-muted)] hover:text-red-500"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.csv,.xlsx,.xls,.png,.jpg,.jpeg,.gif,.zip"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          if (file && file.size > 5 * 1024 * 1024) {
+                            toast.error('File size exceeds 5MB limit');
+                            return;
+                          }
+                          setSelectedFile(file);
+                        }}
+                      />
+                    </label>
+
+                    {/* Row: Time Spent + How Contacted */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Time Spent (00:00)"
+                        className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] text-sm"
+                        {...noteForm.register('timeSpent')}
+                      />
+                      <Select onValueChange={(value) => noteForm.setValue('howContacted', value)}>
+                        <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] text-sm">
+                          <SelectValue placeholder="How Contacted" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Phone Call">Phone Call</SelectItem>
+                          <SelectItem value="Travel">Travel</SelectItem>
+                          <SelectItem value="Email">Email</SelectItem>
+                          <SelectItem value="Incident Reporting">Incident Reporting</SelectItem>
+                          <SelectItem value="Report Writing">Report Writing</SelectItem>
+                          <SelectItem value="Research">Research</SelectItem>
+                          <SelectItem value="Meeting">Meeting</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {/* Grid Fields */}
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Time Spent</label>
-                        <Input placeholder="00:00" className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]" {...noteForm.register('timeSpent')} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">How Contacted</label>
-                        <Select {...noteForm.register('howContacted')}>
-                          <SelectTrigger className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]">
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Phone">Phone</SelectItem>
-                            <SelectItem value="Email">Email</SelectItem>
-                            <SelectItem value="In Person">In Person</SelectItem>
-                            <SelectItem value="Video Call">Video Call</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Travel (KM)</label>
-                        <Input placeholder="0" className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]" {...noteForm.register('travelKm')} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2 block">Non-direct Support</label>
-                        <Select {...noteForm.register('nonDirectSupport')}>
-                          <SelectTrigger className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]">
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">Yes</SelectItem>
-                            <SelectItem value="No">No</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {/* Row: Travel (KM) + Non-direct Support */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        placeholder="Travel (KM)"
+                        className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] text-sm"
+                        {...noteForm.register('travelKm')}
+                      />
+                      <Select onValueChange={(value) => noteForm.setValue('nonDirectSupport', value)}>
+                        <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] text-sm">
+                          <SelectValue placeholder="Non-direct support" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yes">Yes</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {/* Toggles */}
-                    <div className="flex items-center gap-8 py-2">
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className="relative">
-                          <input type="checkbox" className="peer sr-only" {...noteForm.register('billable')} />
-                          <div className="w-11 h-6 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] peer-checked:border-[var(--color-primary)] transition-all" />
-                          <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
-                        </div>
-                        <span className="text-sm font-medium text-[var(--color-text)]">Billable</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className="relative">
-                          <input type="checkbox" className="peer sr-only" {...noteForm.register('showToWorker')} />
-                          <div className="w-11 h-6 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] peer-checked:border-[var(--color-primary)] transition-all" />
-                          <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
-                        </div>
-                        <span className="text-sm font-medium text-[var(--color-text)]">Show to Worker</span>
-                      </label>
-                    </div>
-
-                    {/* Submit */}
-                    <div className="flex justify-end pt-4 border-t border-[var(--color-border)]">
-                      <Button type="submit" className="h-11 px-8 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-medium">
-                        Submit Case Note
+                    {/* Toggles + Submit */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="relative">
+                            <input type="checkbox" className="peer sr-only" {...noteForm.register('billable')} />
+                            <div className="w-9 h-5 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] peer-checked:border-[var(--color-primary)] transition-all" />
+                            <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all peer-checked:translate-x-4" />
+                          </div>
+                          <span className="text-sm text-[var(--color-text)]">Billable</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="relative">
+                            <input type="checkbox" className="peer sr-only" {...noteForm.register('showToWorker')} />
+                            <div className="w-9 h-5 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] peer-checked:border-[var(--color-primary)] transition-all" />
+                            <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all peer-checked:translate-x-4" />
+                          </div>
+                          <span className="text-sm text-[var(--color-text)]">Show to worker</span>
+                        </label>
+                      </div>
+                      <Button type="submit" disabled={creatingNote} className="h-10 px-6 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-sm font-medium">
+                        {creatingNote ? 'Saving…' : 'Submit'}
                       </Button>
                     </div>
                   </form>
@@ -561,22 +871,130 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                 {!caseNotes?.length ? (
                   <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
                     <p className="text-sm font-medium text-[var(--color-text)] mb-1">No Data Found!</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">Get started by creating a new case Note</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Get started by creating a new case note</p>
                   </div>
                 ) : (
-                  <div className="mt-6 space-y-3">
-                    {caseNotes.map((n) => (
-                      <div key={n.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-[var(--color-text)]">{n.subject || 'Case Note'}</p>
-                            <p className="text-xs text-[var(--color-text-muted)] mt-1">{new Date(n.date).toLocaleDateString('en-AU')}</p>
+                  <div className="mt-6 space-y-1">
+                    {(() => {
+                      // Group notes by date
+                      type CNType = { id: string; date: string; subject?: string; content: string; createdBy: string; timeSpent?: string; howContacted?: string; createdAt?: string; billable?: boolean; nonDirectSupport?: string; attachmentUrl?: string; travelKm?: string; showToWorker?: boolean };
+                      const typedNotes = (caseNotes ?? []) as CNType[];
+                      const groups: Record<string, CNType[]> = {};
+                      typedNotes.forEach((n) => {
+                        const key = new Date(n.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(n);
+                      });
+                      return Object.entries(groups).map(([dateLabel, notes]) => (
+                        <div key={dateLabel}>
+                          <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide px-1 py-3">{dateLabel}</p>
+                          <div className="space-y-3">
+                            {notes.map((n) => {
+                              const noteInitials = (n.createdBy ?? 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                              const createdAt = new Date(n.createdAt ?? n.date);
+                              const now = new Date();
+                              const diffMs = now.getTime() - createdAt.getTime();
+                              const diffMins = Math.floor(diffMs / 60000);
+                              const timeAgo = diffMins < 1 ? 'just now' : diffMins < 60 ? `${diffMins} minute${diffMins > 1 ? 's' : ''} ago` : diffMins < 1440 ? `${Math.floor(diffMins / 60)}h ago` : `${Math.floor(diffMins / 1440)}d ago`;
+                              return (
+                                <div key={n.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:shadow-sm transition-shadow">
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-sm font-bold text-white">
+                                      {noteInitials}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      {/* Header row: Name + Badges + Actions */}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm font-semibold text-[var(--color-text)]">{n.createdBy ?? 'Unknown'}</span>
+                                          {/* Badges */}
+                                          {n.subject && (
+                                            <span className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-text)]">
+                                              Subject: {n.subject}
+                                            </span>
+                                          )}
+                                          {n.timeSpent && (
+                                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+                                              Time: {n.timeSpent}
+                                            </span>
+                                          )}
+                                          {n.howContacted && (
+                                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-600">
+                                              Contacted: {n.howContacted}
+                                            </span>
+                                          )}
+                                          {n.travelKm && (
+                                            <span className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-orange-600">
+                                              Travel: {n.travelKm} KM
+                                            </span>
+                                          )}
+                                          {n.billable && (
+                                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
+                                              Billable: Yes
+                                            </span>
+                                          )}
+                                          {n.nonDirectSupport && (
+                                            <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                                              Non-direct: {n.nonDirectSupport}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <span className="text-xs text-[var(--color-text-muted)] mr-1">{timeAgo}</span>
+                                          <button
+                                            onClick={() => {
+                                              setEditingNote(n);
+                                              editNoteForm.reset({
+                                                subject: n.subject ?? '',
+                                                content: n.content,
+                                                date: n.date ? new Date(n.date).toISOString().split('T')[0] : '',
+                                                timeSpent: n.timeSpent ?? '',
+                                                howContacted: n.howContacted ?? '',
+                                                travelKm: n.travelKm ?? '',
+                                                billable: n.billable ?? false,
+                                                showToWorker: n.showToWorker ?? false,
+                                              });
+                                              setEditNoteDialogOpen(true);
+                                            }}
+                                            className="p-1.5 rounded hover:bg-[var(--color-subtle)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                            title="Edit"
+                                          >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                          </button>
+                                          <button
+                                            onClick={() => { setDeletingNoteId(n.id); setDeleteNoteDialogOpen(true); }}
+                                            className="p-1.5 rounded hover:bg-[var(--color-subtle)] text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
+                                            title="Delete"
+                                          >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {/* Timestamp */}
+                                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                                        Last updated: {createdAt.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })} {createdAt.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                                      </p>
+                                      {/* Content */}
+                                      <p className="text-sm text-[var(--color-text-secondary)] mt-2 whitespace-pre-wrap leading-relaxed">{n.content}</p>
+                                      {/* Attachment indicator */}
+                                      {n.attachmentUrl && (
+                                        <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-[var(--color-subtle)] border border-[var(--color-border)]">
+                                          <svg className="w-4 h-4 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                          </svg>
+                                          <span className="text-xs text-[var(--color-text-muted)] truncate flex-1">{n.attachmentUrl.split('/').pop()}</span>
+                                          <a href={n.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--color-primary)] hover:underline font-medium">Download</a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          {n.billable && <Badge variant="secondary" className="text-xs">Billable</Badge>}
                         </div>
-                        <p className="text-xs text-[var(--color-text-secondary)] mt-2 line-clamp-2">{n.content}</p>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
@@ -635,257 +1053,586 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                 />
               </div>
 
-              {/* Medications Table */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+              {/* Medications Table with Expandable Rows */}
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-subtle)]">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Medication Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Dosage</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Schedule</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Start Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">End Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)]">Actions</th>
+                    <thead className="bg-gradient-to-r from-[var(--color-subtle)] to-[var(--color-bg)] border-b border-[var(--color-border)]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider w-10"></th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Medication Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Dosage</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Schedule</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Start Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">End Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text)] uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[var(--color-border-subtle)]">
                       {!medications?.length ? (
-                        <tr className="border-b border-[var(--color-border-subtle)]">
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">N/A</td>
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">PRN</td>
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">N/A</td>
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">As Needed</td>
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">N/A</td>
-                          <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">-</td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--color-error)]">Cancel</Button>
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--color-primary)]">Clone</Button>
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--color-primary)]">Edit</Button>
+                        <tr>
+                          <td colSpan={8} className="px-4 py-8 text-center">
+                            <div className="flex flex-col items-center justify-center py-8">
+                              <div className="w-12 h-12 rounded-full bg-[var(--color-subtle)] flex items-center justify-center mb-3">
+                                <svg className="w-6 h-6 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                              </div>
+                              <p className="text-sm text-[var(--color-text-muted)] mb-1">No medication history found</p>
+                              <p className="text-xs text-[var(--color-text-muted)]">Add medications to view history</p>
                             </div>
                           </td>
                         </tr>
                       ) : (
-                        medications.map((m) => (
-                          <tr key={m.id} className="border-b border-[var(--color-border-subtle)] last:border-0">
-                            <td className="px-4 py-3 text-xs font-medium text-[var(--color-text)]">{m.medicationName}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{m.medicineType || '—'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{m.dosage || '—'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{m.frequency || '—'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{m.startDate ? new Date(m.startDate).toLocaleDateString('en-AU') : '—'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{m.endDate ? new Date(m.endDate).toLocaleDateString('en-AU') : '-'}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 text-xs">Edit</Button>
-                                <Button variant="ghost" size="sm" className="h-7 text-xs text-[var(--color-error)]">Delete</Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                        (medications as {id:string;medicationName:string;medicineType?:string;dosage?:string;frequency?:string;startDate?:string;endDate?:string;instructions?:string;sideEffects?:string}[]).map((m) => {
+                          const isExpanded = expandedMedId === m.id;
+                          return (
+                            <Fragment key={`med-${m.id}`}>
+                              <tr
+                                className={`transition-all duration-200 ${isExpanded ? 'bg-gradient-to-r from-blue-50/50 to-transparent shadow-sm' : 'hover:bg-[var(--color-subtle)]/50'}`}
+                              >
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedMedId(isExpanded ? null : m.id)}
+                                    className="flex items-center justify-center w-7 h-7 hover:bg-[var(--color-primary)]/10 rounded-lg transition-all duration-200 group"
+                                    title={isExpanded ? 'Collapse details' : 'Expand details'}
+                                  >
+                                    <svg
+                                      className={`w-3.5 h-3.5 text-[var(--color-primary)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                      fill="currentColor"
+                                      viewBox="0 0 448 512"
+                                    >
+                                      <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z" />
+                                    </svg>
+                                  </button>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="text-sm font-semibold text-[var(--color-text)]">{m.medicationName || 'N/A'}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-lg shadow-sm bg-purple-50 text-purple-700 border border-purple-200">
+                                    {m.medicineType || 'PRN'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-semibold text-[var(--color-text)]">{m.dosage || 'N/A'}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-semibold text-[var(--color-text)]">{m.frequency || 'N/A'}</span>
+                                    <span className="text-xs text-[var(--color-text-muted)] font-medium">As Needed</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="text-sm font-medium text-[var(--color-text)]">
+                                    {m.startDate ? new Date(m.startDate).toLocaleDateString('en-AU') : <span className="text-[var(--color-text-muted)]">N/A</span>}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="text-sm font-medium text-[var(--color-text)]">
+                                    {m.endDate ? new Date(m.endDate).toLocaleDateString('en-AU') : <span className="text-[var(--color-text-muted)]">-</span>}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedMedId(isExpanded ? null : m.id)}
+                                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    >
+                                      {isExpanded ? 'Cancel' : 'Edit'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        medForm.setValue('medicationName', m.medicationName + ' (Copy)');
+                                        medForm.setValue('dosage', m.dosage || '');
+                                        medForm.setValue('frequency', m.frequency || '');
+                                        medForm.setValue('startDate', m.startDate || '');
+                                        medForm.setValue('endDate', m.endDate || '');
+                                        medForm.setValue('instructions', m.instructions || '');
+                                        medForm.setValue('sideEffects', m.sideEffects || '');
+                                        setMedDialogOpen(true);
+                                        toast.success('Medication cloned - edit and save');
+                                      }}
+                                      className="px-2.5 py-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:shadow-sm rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
+                                      title="Clone Medication"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 448 512">
+                                        <path d="M320 448v40c0 13.255-10.745 24-24 24H24c-13.255 0-24-10.745-24-24V120c0-13.255 10.745-24 24-24h72v296c0 30.879 25.121 56 56 56h168zm0-344V0H152c-13.255 0-24 10.745-24 24v368c0 13.255 10.745 24 24 24h272c13.255 0 24-10.745 24-24V128H344c-13.2 0-24-10.8-24-24zm120.971-31.029L375.029 7.029A24 24 0 0 0 358.059 0H352v96h96v-6.059a24 24 0 0 0-7.029-16.97z" />
+                                      </svg>
+                                      Clone
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr>
+                                  <td colSpan={8} className="px-4 py-6 bg-gradient-to-b from-[var(--color-subtle)]/50 to-transparent">
+                                    <div className="space-y-6 bg-[var(--color-bg)] rounded-lg p-6 border-2 border-[var(--color-primary)]/20 shadow-lg">
+                                      {/* Edit Header */}
+                                      <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--color-border)]">
+                                        <h3 className="text-lg font-bold text-[var(--color-text)]">Edit Medication</h3>
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            size="sm"
+                                            disabled={updatingMed}
+                                            onClick={() => {
+                                              updateMedication({ medicationId: m.id, medicationName: m.medicationName, dosage: m.dosage, frequency: m.frequency, startDate: m.startDate, endDate: m.endDate, instructions: m.instructions, sideEffects: m.sideEffects }, {
+                                                onSuccess: () => { toast.success('Medication updated'); setExpandedMedId(null); },
+                                                onError: () => toast.error('Failed to update medication'),
+                                              });
+                                            }}
+                                            className="h-9 px-4 bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white"
+                                          >
+                                            <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                            </svg>
+                                            {updatingMed ? 'Saving…' : 'Save'}
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => { setDeletingMedId(m.id); setDeleteMedDialogOpen(true); }}
+                                            className="h-9 px-4 text-[var(--color-error)] hover:text-[var(--color-error)] hover:bg-red-50"
+                                          >
+                                            <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            Delete
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setExpandedMedId(null)}
+                                            className="h-9 px-4"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      {/* Warning Banner */}
+                                      <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 flex items-start gap-3">
+                                        <svg className="h-5 w-5 text-[var(--color-warning)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <p className="text-sm text-[var(--color-warning)]">
+                                          <span className="font-semibold">Warning:</span> Medication listing must be added/ updated by an appropriate medical practitioner
+                                        </p>
+                                      </div>
+
+                                      {/* Basic Info Grid */}
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="flex flex-col gap-2">
+                                          <label className="text-xs font-semibold text-[var(--color-text)]">Medicine Type <span className="text-[var(--color-error)]">*</span></label>
+                                          <Select defaultValue={m.medicineType || 'prn'}>
+                                            <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                                              <SelectValue placeholder="Select..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="prescription">Prescription</SelectItem>
+                                              <SelectItem value="otc">Over the Counter</SelectItem>
+                                              <SelectItem value="supplement">Supplement</SelectItem>
+                                              <SelectItem value="prn">PRN</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                          <label className="text-xs font-semibold text-[var(--color-text)]">Medicine Name <span className="text-[var(--color-error)]">*</span></label>
+                                          <Input defaultValue={m.medicationName} placeholder="Enter name..." className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                          <label className="text-xs font-semibold text-[var(--color-text)]">Start Date <span className="text-[var(--color-error)]">*</span></label>
+                                          <div className="relative">
+                                            <Input type="date" defaultValue={m.startDate} className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
+                                            <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                          <label className="text-xs font-semibold text-[var(--color-text)]">End Date</label>
+                                          <div className="relative">
+                                            <Input type="date" defaultValue={m.endDate} className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
+                                            <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Event & Dosage */}
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="flex flex-col gap-2">
+                                          <label className="text-xs font-semibold text-[var(--color-text)]">Event <span className="text-[var(--color-error)]">*</span></label>
+                                          <Select defaultValue="prn">
+                                            <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                                              <SelectValue placeholder="Select..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="routine">Routine</SelectItem>
+                                              <SelectItem value="prn">PRN (As Needed)</SelectItem>
+                                              <SelectItem value="one_time">One Time</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+
+                                      {/* Dosage Information Section */}
+                                      <div className="border-t border-[var(--color-border)] pt-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                          <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                                          <h4 className="text-sm font-semibold text-blue-600">Dosage Information</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-semibold text-[var(--color-text)]">Quantity <span className="text-[var(--color-error)]">*</span></label>
+                                            <Input type="number" step="0.01" min="0" max="9" placeholder="Enter quantity (0-9)" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                                          </div>
+                                          <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-semibold text-[var(--color-text)]">Unit of Measure <span className="text-[var(--color-error)]">*</span></label>
+                                            <Select>
+                                              <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                                                <SelectValue placeholder="Select..." />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="mg">mg</SelectItem>
+                                                <SelectItem value="ml">ml</SelectItem>
+                                                <SelectItem value="tablet">tablet(s)</SelectItem>
+                                                <SelectItem value="capsule">capsule(s)</SelectItem>
+                                                <SelectItem value="drop">drop(s)</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Instructions & Side Effects */}
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-1 h-4 bg-green-500 rounded-full" />
+                                            <h4 className="text-sm font-semibold text-green-600">Medication Instructions</h4>
+                                          </div>
+                                          <Textarea
+                                            defaultValue={m.instructions}
+                                            placeholder="Write details of how and when the medication should be administered..."
+                                            className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-y"
+                                          />
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                                            <h4 className="text-sm font-semibold text-orange-600">Side Effects</h4>
+                                          </div>
+                                          <Textarea
+                                            defaultValue={m.sideEffects}
+                                            placeholder="Write any known or observed side effects of this medicine..."
+                                            className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-y"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Allergies Section */}
+                                      <div className="border border-[var(--color-error)]/30 rounded-lg bg-[var(--color-error)]/5 p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                          <svg className="h-5 w-5 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                          </svg>
+                                          <h4 className="text-sm font-semibold text-[var(--color-error)]">Allergies & Adverse Drug Reactions (ADRs)</h4>
+                                          <span className="text-xs text-[var(--color-text-muted)]">(for this medication)</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
+                                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                              </svg>
+                                              Medicines Type/Name
+                                            </label>
+                                            <Input placeholder="e.g., Penicillin, Aspirin..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
+                                          </div>
+                                          <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
+                                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                              </svg>
+                                              Allergy Name
+                                            </label>
+                                            <Input placeholder="e.g., Drug Allergy, Food Allergy..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
+                                          </div>
+                                          <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
+                                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                              </svg>
+                                              Reaction Type
+                                            </label>
+                                            <Input placeholder="e.g., Rash, Nausea, Difficulty Breathing..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
+                                          </div>
+                                          <div className="flex flex-col gap-2 md:col-span-2">
+                                            <label className="text-xs font-semibold text-[var(--color-primary)] flex items-center gap-1.5">
+                                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                              </svg>
+                                              Allergy Notes
+                                            </label>
+                                            <Textarea placeholder="Write down any additional details, severity, date of occurrence..." className="min-h-[80px] bg-[var(--color-bg)] border-[var(--color-error)]/30 resize-y" />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
                 </div>
-                
-                {!medications?.length && (
-                  <div className="p-8 text-center">
-                    <p className="text-sm text-[var(--color-text-muted)] mb-1">No medications found</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">Add a new medication record using the "Add Medication" button above</p>
-                  </div>
-                )}
               </div>
 
-              {/* Add Medication Form (shown when medDialogOpen) */}
+              {/* Inline Add Medication Form */}
               {medDialogOpen && (
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-sm">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
-                    <h3 className="text-base font-semibold text-[var(--color-text)]">Add New Medication</h3>
+                <div className="space-y-6 bg-[var(--color-bg)] rounded-xl p-6 border-2 border-[var(--color-primary)]/20 shadow-lg">
+                  {/* Add Header */}
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--color-border)]">
+                    <h3 className="text-lg font-bold text-[var(--color-text)]">Add New Medication</h3>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setMedDialogOpen(false)}>Cancel</Button>
-                      <Button size="sm" onClick={() => setMedDialogOpen(false)} className="bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white h-9">
+                      <Button
+                        size="sm"
+                        onClick={medForm.handleSubmit((data) => {
+                          createMedication(data as Record<string, unknown>, {
+                            onSuccess: () => { toast.success('Medication added'); medForm.reset(); setMedDialogOpen(false); },
+                            onError: () => toast.error('Failed to add medication'),
+                          });
+                        })}
+                        disabled={creatingMed}
+                        className="h-9 px-4 bg-[var(--color-success)] hover:bg-[var(--color-success)]/90 text-white"
+                      >
                         <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                         </svg>
-                        Save
+                        {creatingMed ? 'Saving…' : 'Save'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setMedDialogOpen(false); medForm.reset(); }}
+                        className="h-9 px-4"
+                      >
+                        Cancel
                       </Button>
                     </div>
                   </div>
-                  
-                  <form className="p-6 space-y-6">
-                    {/* Warning Banner */}
-                    <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 flex items-start gap-3">
-                      <svg className="h-5 w-5 text-[var(--color-warning)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                  {/* Warning Banner */}
+                  <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 flex items-start gap-3">
+                    <svg className="h-5 w-5 text-[var(--color-warning)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p className="text-sm text-[var(--color-warning)]">
+                      <span className="font-semibold">Warning:</span> Medication listing must be added/ updated by an appropriate medical practitioner
+                    </p>
+                  </div>
+
+                  {/* Basic Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Medicine Type <span className="text-[var(--color-error)]">*</span></label>
+                      <Select>
+                        <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="prescription">Prescription</SelectItem>
+                          <SelectItem value="otc">Over the Counter</SelectItem>
+                          <SelectItem value="supplement">Supplement</SelectItem>
+                          <SelectItem value="prn">PRN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Medicine Name <span className="text-[var(--color-error)]">*</span></label>
+                      <Input {...medForm.register('medicationName')} placeholder="Enter name..." className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                      {medForm.formState.errors.medicationName && <p className="text-xs text-[var(--color-error)]">{medForm.formState.errors.medicationName.message}</p>}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Start Date <span className="text-[var(--color-error)]">*</span></label>
+                      <div className="relative">
+                        <Input type="date" {...medForm.register('startDate')} className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">End Date</label>
+                      <div className="relative">
+                        <Input type="date" {...medForm.register('endDate')} className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Event & Dosage */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Event <span className="text-[var(--color-error)]">*</span></label>
+                      <Select defaultValue="prn">
+                        <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="routine">Routine</SelectItem>
+                          <SelectItem value="prn">PRN (As Needed)</SelectItem>
+                          <SelectItem value="one_time">One Time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Dosage</label>
+                      <Input {...medForm.register('dosage')} placeholder="e.g., 500mg" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-[var(--color-text)]">Frequency</label>
+                      <Input {...medForm.register('frequency')} placeholder="e.g., Twice daily" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                    </div>
+                  </div>
+
+                  {/* Dosage Information Section */}
+                  <div className="border-t border-[var(--color-border)] pt-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                      <h4 className="text-sm font-semibold text-blue-600">Dosage Information</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold text-[var(--color-text)]">Quantity <span className="text-[var(--color-error)]">*</span></label>
+                        <Input type="number" step="0.01" min="0" max="9" placeholder="Enter quantity (0-9)" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold text-[var(--color-text)]">Unit of Measure <span className="text-[var(--color-error)]">*</span></label>
+                        <Select>
+                          <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mg">mg</SelectItem>
+                            <SelectItem value="ml">ml</SelectItem>
+                            <SelectItem value="tablet">tablet(s)</SelectItem>
+                            <SelectItem value="capsule">capsule(s)</SelectItem>
+                            <SelectItem value="drop">drop(s)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Instructions & Side Effects */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1 h-4 bg-green-500 rounded-full" />
+                        <h4 className="text-sm font-semibold text-green-600">Medication Instructions</h4>
+                      </div>
+                      <Textarea {...medForm.register('instructions')} placeholder="Write details of how and when the medication should be administered..." className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-y" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                        <h4 className="text-sm font-semibold text-orange-600">Side Effects</h4>
+                      </div>
+                      <Textarea {...medForm.register('sideEffects')} placeholder="Write any known or observed side effects of this medicine..." className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-y" />
+                    </div>
+                  </div>
+
+                  {/* Allergies Section */}
+                  <div className="border border-[var(--color-error)]/30 rounded-lg bg-[var(--color-error)]/5 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <svg className="h-5 w-5 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <p className="text-sm text-[var(--color-warning)]">
-                        <span className="font-semibold">Warning:</span> Medication listing must be added/ updated by an appropriate medical practitioner
-                      </p>
+                      <h4 className="text-sm font-semibold text-[var(--color-error)]">Allergies & Adverse Drug Reactions (ADRs)</h4>
+                      <span className="text-xs text-[var(--color-text-muted)]">(for this medication)</span>
                     </div>
-
-                    {/* Basic Info Row 1 */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Medicine Type <span className="text-[var(--color-error)]">*</span></label>
-                        <Select>
-                          <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="prescription">Prescription</SelectItem>
-                            <SelectItem value="otc">Over the Counter</SelectItem>
-                            <SelectItem value="supplement">Supplement</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                          </svg>
+                          Medicines Type/Name
+                        </label>
+                        <Input placeholder="e.g., Penicillin, Aspirin..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Medicine Name <span className="text-[var(--color-error)]">*</span></label>
-                        <Input placeholder="Enter name..." className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          Allergy Name
+                        </label>
+                        <Input placeholder="e.g., Drug Allergy, Food Allergy..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Start Date <span className="text-[var(--color-error)]">*</span></label>
-                        <div className="relative">
-                          <Input type="date" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
-                          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Basic Info Row 2 */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Event <span className="text-[var(--color-error)]">*</span></label>
-                        <Select>
-                          <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
-                            <SelectValue placeholder="Select..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="routine">Routine</SelectItem>
-                            <SelectItem value="prn">PRN (As Needed)</SelectItem>
-                            <SelectItem value="one_time">One Time</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">End Date</label>
-                        <div className="relative">
-                          <Input type="date" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)] pr-10" />
-                          <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)] pointer-events-none" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Dosage Information Section */}
-                    <div className="border-t border-[var(--color-border)] pt-5">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="w-1 h-5 bg-blue-500 rounded-full" />
-                        <h4 className="text-sm font-semibold text-blue-600">Dosage Information</h4>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Quantity <span className="text-[var(--color-error)]">*</span></label>
-                          <Input placeholder="Enter quantity (0-9)" className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-[var(--color-text)] mb-1.5 block">Unit of Measure <span className="text-[var(--color-error)]">*</span></label>
-                          <Select>
-                            <SelectTrigger className="h-10 bg-[var(--color-surface)] border-[var(--color-border)]">
-                              <SelectValue placeholder="Select..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mg">mg</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                              <SelectItem value="tablet">tablet(s)</SelectItem>
-                              <SelectItem value="capsule">capsule(s)</SelectItem>
-                              <SelectItem value="drop">drop(s)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Instructions & Side Effects */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-1 h-5 bg-green-500 rounded-full" />
-                          <h4 className="text-sm font-semibold text-green-600">Medication Instructions</h4>
-                        </div>
-                        <Textarea 
-                          placeholder="Write details of how and when the medication should be administered..." 
-                          className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-none"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-1 h-5 bg-orange-500 rounded-full" />
-                          <h4 className="text-sm font-semibold text-orange-600">Side Effects</h4>
-                        </div>
-                        <Textarea 
-                          placeholder="Write any known or observed side effects of this medicine..." 
-                          className="min-h-[100px] bg-[var(--color-surface)] border-[var(--color-border)] resize-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Allergies Section */}
-                    <div className="border border-[var(--color-error)]/30 rounded-lg bg-[var(--color-error)]/5 p-5">
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg className="h-5 w-5 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <h4 className="text-sm font-semibold text-[var(--color-error)]">Allergies & Adverse Drug Reactions (ADRs)</h4>
-                        <span className="text-xs text-[var(--color-text-muted)]">(for this medication)</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div>
-                          <label className="text-xs font-medium text-[var(--color-error)] mb-1.5 flex items-center gap-1.5">
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
-                            Medicines Type/Name
-                          </label>
-                          <Input placeholder="e.g., Penicillin, Aspirin..." className="h-10 bg-white border-[var(--color-error)]/30 text-sm" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-[var(--color-error)] mb-1.5 flex items-center gap-1.5">
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                            Allergy Name
-                          </label>
-                          <Input placeholder="e.g., Drug Allergy, Food Allergy..." className="h-10 bg-white border-[var(--color-error)]/30 text-sm" />
-                        </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <label className="text-xs font-medium text-[var(--color-error)] mb-1.5 flex items-center gap-1.5">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-semibold text-[var(--color-error)] flex items-center gap-1.5">
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
                           Reaction Type
                         </label>
-                        <Input placeholder="e.g., Rash, Nausea, Difficulty Breathing..." className="h-10 bg-white border-[var(--color-error)]/30 text-sm" />
+                        <Input placeholder="e.g., Rash, Nausea, Difficulty Breathing..." className="h-10 bg-[var(--color-bg)] border-[var(--color-error)]/30" />
                       </div>
-                      
-                      <div className="mt-4">
-                        <label className="text-xs font-medium text-[var(--color-primary)] mb-1.5 flex items-center gap-1.5">
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-xs font-semibold text-[var(--color-primary)] flex items-center gap-1.5">
                           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           Allergy Notes
                         </label>
-                        <Textarea 
-                          placeholder="Write down any additional details, severity, date of occurrence..." 
-                          className="min-h-[80px] bg-white border-[var(--color-error)]/30 resize-none"
-                        />
+                        <Textarea placeholder="Write down any additional details, severity, date of occurrence..." className="min-h-[80px] bg-[var(--color-bg)] border-[var(--color-error)]/30 resize-y" />
                       </div>
                     </div>
-                  </form>
+                  </div>
                 </div>
               )}
+
+              {/* Delete Medication Confirmation Dialog */}
+              <Dialog open={deleteMedDialogOpen} onOpenChange={(o) => { setDeleteMedDialogOpen(o); if (!o) setDeletingMedId(null); }}>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader><DialogTitle>Delete Medication</DialogTitle></DialogHeader>
+                  <div className="flex items-start gap-3 py-2">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">Are you sure you want to delete this medication?</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1">This action cannot be undone.</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setDeleteMedDialogOpen(false); setDeletingMedId(null); }}>Cancel</Button>
+                    <Button
+                      variant="destructive"
+                      disabled={deletingMed}
+                      onClick={() => {
+                        if (!deletingMedId) return;
+                        deleteMedication(deletingMedId, {
+                          onSuccess: () => { toast.success('Medication deleted'); setDeleteMedDialogOpen(false); setDeletingMedId(null); setExpandedMedId(null); },
+                          onError: () => toast.error('Failed to delete medication'),
+                        });
+                      }}
+                    >
+                      {deletingMed ? 'Deleting…' : 'Delete'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
             </div>
           </TabsContent>
 
@@ -952,7 +1699,7 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                   </div>
                 ) : (
                   <div className="p-5 space-y-3">
-                    {participant.shiftNotes.map((n) => (
+                    {(participant.shiftNotes as {id:string;content:string;shiftDate:string;workerId?:string}[]).map((n) => (
                       <div key={n.id} className="rounded-lg border border-[var(--color-border)] p-4 bg-[var(--color-bg)]">
                         <p className="text-sm text-[var(--color-text)]">{n.content}</p>
                         <div className="flex items-center gap-3 mt-2">
@@ -1534,7 +2281,7 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                         <div className="relative bg-gray-100 rounded-lg p-4 pl-8">
                           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 bg-teal-600 rounded text-white text-xs flex items-center justify-center font-bold -mr-3">02</div>
                           <p className="font-semibold text-sm text-[var(--color-text)] text-center">Risk Assessment</p>
-                          <p className="text-xs text-[var(--color-text-muted)] text-center">Control Matrix (Use RAM to determine risk ratings based on risks' impact and likelihood)</p>
+                          <p className="text-xs text-[var(--color-text-muted)] text-center">Control Matrix (Use RAM to determine risk ratings based on risks&apos; impact and likelihood)</p>
                         </div>
                       </div>
                       <div className="flex justify-end mt-6">
@@ -1666,28 +2413,28 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                   </div>
                   <div>
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">NDIS Number</label>
-                    <Input defaultValue={participant.ndisNumber || '432198765'} className="h-10 bg-[var(--color-bg)]" />
+                    <Input defaultValue={participant.ndisNumber} placeholder="Enter NDIS number" className="h-10 bg-[var(--color-bg)]" />
                   </div>
                   <div>
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Primary Phone Number</label>
-                    <Input defaultValue={participant.phone || '0412345678'} className="h-10 bg-[var(--color-bg)]" />
+                    <Input defaultValue={participant.primaryPhoneNumber} placeholder="Enter phone number" className="h-10 bg-[var(--color-bg)]" />
                   </div>
                   <div>
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Primary Email Address</label>
-                    <Input defaultValue={participant.email} className="h-10 bg-[var(--color-bg)]" />
+                    <Input defaultValue={participant.primaryEmailAddress} placeholder="Enter email address" className="h-10 bg-[var(--color-bg)]" />
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Street Address</label>
-                    <Input defaultValue="456 Secondary St" className="h-10 bg-[var(--color-bg)]" />
+                    <Input defaultValue={participant.address} placeholder="Enter street address" className="h-10 bg-[var(--color-bg)]" />
                     <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Start typing an address and select from suggestions</p>
                   </div>
                   <div>
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Suburb</label>
-                    <Input defaultValue="Melbourne" className="h-10 bg-[var(--color-bg)]" />
+                    <Input defaultValue={participant.suburb} placeholder="Enter suburb" className="h-10 bg-[var(--color-bg)]" />
                   </div>
                   <div>
                     <label className="text-xs text-[var(--color-text-muted)] mb-1 block">State</label>
-                    <Select defaultValue={participant.state || 'TAS'}>
+                    <Select defaultValue={participant.state}>
                       <SelectTrigger className="h-10 bg-[var(--color-bg)]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="TAS">TAS</SelectItem>
@@ -1912,7 +2659,7 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Emails for Invoice <span className="text-[var(--color-text-muted)]">(Enter one email, press "Enter" to add another. repeat for more emails.)</span></label>
+                  <label className="text-xs text-[var(--color-text-muted)] mb-1 block">Emails for Invoice <span className="text-[var(--color-text-muted)]">(Enter one email, press &quot;Enter&quot; to add another. repeat for more emails.)</span></label>
                   <Input placeholder="Input your emails" className="h-10 bg-[var(--color-bg)]" />
                 </div>
               </div>
@@ -1968,6 +2715,23 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
                       <p className="text-xs text-[var(--color-text-muted)]">Require Allied Health Services</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Initial Assessment Form */}
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[var(--color-text)] mb-1">Initial Assessment Form</h3>
+                    <p className="text-xs text-[var(--color-text-muted)]">Complete the participant on-boarding assessment form with disability requirements, communication, medical providers and more.</p>
+                  </div>
+                  <Button
+                    className="h-9 px-4 shrink-0 ml-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-sm"
+                    onClick={() => setAssessmentFormOpen(true)}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    Open Form
+                  </Button>
                 </div>
               </div>
 
@@ -2120,102 +2884,136 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
       </Dialog>
 
       {/* Add Goal */}
-      <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add Goal</DialogTitle></DialogHeader>
-          <form className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Description *</label>
-              <Textarea {...goalForm.register('description')} rows={3} placeholder="Goal description" />
-              {goalForm.formState.errors.description && <p className="mt-1 text-xs text-[var(--color-error)]">{goalForm.formState.errors.description.message}</p>}
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Goal Type *</label>
-              <Select onValueChange={(v) => goalForm.setValue('goalType', v as GoalFormData['goalType'])}>
-                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Short Term">Short Term</SelectItem>
-                  <SelectItem value="Long Term">Long Term</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Progress (%)</label>
-              <Input type="number" min="0" max="100" {...goalForm.register('progress', { valueAsNumber: true })} placeholder="0" />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Achievement Notes</label>
-              <Textarea {...goalForm.register('achievementNotes')} rows={2} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Hurdles</label>
-              <Textarea {...goalForm.register('hurdles')} rows={2} />
-            </div>
-          </form>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGoalDialogOpen(false)}>Cancel</Button>
-            <Button onClick={goalForm.handleSubmit((data) => {
-              createGoal(data as Record<string, unknown>, {
-                onSuccess: () => { toast.success('Goal added'); goalForm.reset(); setGoalDialogOpen(false); },
-                onError: () => toast.error('Failed to add goal'),
-              });
-            })} disabled={creatingGoal}>
-              {creatingGoal ? 'Saving…' : 'Add Goal'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Dialog open={goalDialogOpen} onOpenChange={(o) => { setGoalDialogOpen(o); if (!o) goalForm.reset(); }}>
+        <DialogContent className="sm:max-w-lg">
+          {/* Blue header */}
+          <div className="-mx-6 -mt-6 rounded-t-lg bg-[var(--color-primary)] px-6 py-4 mb-4">
+            <DialogTitle className="text-white text-base font-semibold">Add Goal</DialogTitle>
+          </div>
 
-      {/* Add Medication */}
-      <Dialog open={medDialogOpen} onOpenChange={setMedDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add Medication</DialogTitle></DialogHeader>
-          <form className="space-y-3">
+          <form className="space-y-4" onSubmit={goalForm.handleSubmit((data) => {
+            createGoal(data as Record<string, unknown>, {
+              onSuccess: () => { toast.success('Goal added'); goalForm.reset(); setGoalDialogOpen(false); },
+              onError: () => toast.error('Failed to add goal'),
+            });
+          })}>
+            {/* Describe the Goal */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Medication Name *</label>
-              <Input {...medForm.register('medicationName')} placeholder="e.g. Paracetamol" />
-              {medForm.formState.errors.medicationName && <p className="mt-1 text-xs text-[var(--color-error)]">{medForm.formState.errors.medicationName.message}</p>}
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                <span className="text-[var(--color-primary)]">◉</span>
+                Describe the Goal <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Textarea
+                  {...goalForm.register('description')}
+                  rows={4}
+                  maxLength={1500}
+                  placeholder="Enter a clear and measurable goal description..."
+                  className="resize-none bg-[var(--color-surface)] border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+                />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">
+                  {goalForm.watch('description')?.length ?? 0} / 1500
+                </span>
+              </div>
+              {goalForm.formState.errors.description && (
+                <p className="mt-1 text-xs text-red-500">{goalForm.formState.errors.description.message}</p>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* Goal Type + Progress */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Dosage</label>
-                <Input {...medForm.register('dosage')} placeholder="500mg" />
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                  <svg className="h-3.5 w-3.5 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  Goal Type
+                </label>
+                <Select defaultValue="Short Term" onValueChange={(v) => goalForm.setValue('goalType', v as GoalFormData['goalType'])}>
+                  <SelectTrigger className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Short Term">Short Term</SelectItem>
+                    <SelectItem value="Medium Term">Medium Term</SelectItem>
+                    <SelectItem value="Long Term">Long Term</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Frequency</label>
-                <Input {...medForm.register('frequency')} placeholder="Twice daily" />
+                <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                  <svg className="h-3.5 w-3.5 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  Progress
+                </label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    className="h-11 pr-8 bg-[var(--color-surface)] border-[var(--color-border)]"
+                    {...goalForm.register('progress', { valueAsNumber: true })}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">%</span>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-[var(--color-subtle)]">
+                    <div
+                      className="h-1.5 rounded-full bg-[var(--color-primary)] transition-all"
+                      style={{ width: `${Math.min(100, Math.max(0, goalForm.watch('progress') ?? 0))}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{goalForm.watch('progress') ?? 0}%</span>
+                </div>
               </div>
             </div>
+
+            {/* Achievement Notes */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Prescribed By</label>
-              <Input {...medForm.register('prescribedBy')} placeholder="Dr. Name" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Start Date</label>
-                <Input type="date" {...medForm.register('startDate')} />
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                <svg className="h-3.5 w-3.5 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Achievement Notes
+              </label>
+              <div className="relative">
+                <Textarea
+                  {...goalForm.register('achievementNotes')}
+                  rows={3}
+                  maxLength={1500}
+                  placeholder="Document key milestones and achievements..."
+                  className="resize-none bg-[var(--color-surface)] border-[var(--color-border)]"
+                />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">
+                  {goalForm.watch('achievementNotes')?.length ?? 0} / 1500
+                </span>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">End Date</label>
-                <Input type="date" {...medForm.register('endDate')} />
-              </div>
             </div>
+
+            {/* Hurdles */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Notes</label>
-              <Textarea {...medForm.register('notes')} rows={2} />
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                <span className="text-orange-500">⚠</span>
+                Hurdles
+              </label>
+              <div className="relative">
+                <Textarea
+                  {...goalForm.register('hurdles')}
+                  rows={3}
+                  maxLength={1500}
+                  placeholder="Note any challenges or obstacles encountered..."
+                  className="resize-none bg-[var(--color-surface)] border-[var(--color-border)]"
+                />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">
+                  {goalForm.watch('hurdles')?.length ?? 0} / 1500
+                </span>
+              </div>
             </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => { setGoalDialogOpen(false); goalForm.reset(); }}>Cancel</Button>
+              <Button type="submit" disabled={creatingGoal} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white">
+                {creatingGoal ? 'Saving…' : 'Add Goal'}
+              </Button>
+            </DialogFooter>
           </form>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMedDialogOpen(false)}>Cancel</Button>
-            <Button onClick={medForm.handleSubmit((data) => {
-              createMedication(data as Record<string, unknown>, {
-                onSuccess: () => { toast.success('Medication added'); medForm.reset(); setMedDialogOpen(false); },
-                onError: () => toast.error('Failed to add medication'),
-              });
-            })} disabled={creatingMed}>
-              {creatingMed ? 'Saving…' : 'Add Medication'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -2258,6 +3056,283 @@ export default function ParticipantProfilePage({ params }: { params: Params }) {
               });
             })} disabled={creatingAppt}>
               {creatingAppt ? 'Saving…' : 'Add Appointment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Risk Assessment Form ── */}
+      {riskFormOpen && (
+        <RiskAssessmentFormDialog
+          onClose={() => setRiskFormOpen(false)}
+          onSubmit={(rows: {question: string; status: string; likelihood: string; impact: string; rating: string}[]) => { setRiskRows(rows); setRiskFormOpen(false); }}
+        />
+      )}
+
+      {/* ── Initial Assessment Form ── */}
+      <InitialAssessmentForm
+        open={assessmentFormOpen}
+        onClose={() => setAssessmentFormOpen(false)}
+        participantId={participant.id}
+        participantName={`${participant.firstName} ${participant.lastName}`}
+      />
+
+      {/* ── Edit Goal ── */}
+      <Dialog open={editGoalDialogOpen} onOpenChange={(o) => { setEditGoalDialogOpen(o); if (!o) { setEditingGoal(null); editGoalForm.reset(); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <div className="-mx-6 -mt-6 rounded-t-lg bg-[var(--color-primary)] px-6 py-4 mb-4">
+            <DialogTitle className="text-white text-base font-semibold">Edit Goal</DialogTitle>
+          </div>
+          <form className="space-y-4" onSubmit={editGoalForm.handleSubmit((data) => {
+            updateGoal({ goalId: editingGoal?.id, ...data } as Record<string, unknown>, {
+              onSuccess: () => { toast.success('Goal updated'); setEditGoalDialogOpen(false); setEditingGoal(null); editGoalForm.reset(); },
+              onError: () => toast.error('Failed to update goal'),
+            });
+          })}>
+            <div>
+              <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                <span className="text-[var(--color-primary)]">◉</span> Describe the Goal <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Textarea {...editGoalForm.register('description')} rows={4} maxLength={1500} placeholder="Enter a clear and measurable goal description..." className="resize-none bg-[var(--color-surface)] border-[var(--color-border)]" />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">{editGoalForm.watch('description')?.length ?? 0} / 1500</span>
+              </div>
+              {editGoalForm.formState.errors.description && <p className="mt-1 text-xs text-red-500">{editGoalForm.formState.errors.description.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Goal Type</label>
+                <Select defaultValue={editingGoal?.goalType ?? 'Short Term'} onValueChange={(v) => editGoalForm.setValue('goalType', v as GoalFormData['goalType'])}>
+                  <SelectTrigger className="h-11 bg-[var(--color-surface)] border-[var(--color-border)]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Short Term">Short Term</SelectItem>
+                    <SelectItem value="Medium Term">Medium Term</SelectItem>
+                    <SelectItem value="Long Term">Long Term</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Progress</label>
+                <div className="relative">
+                  <Input type="number" min="0" max="100" placeholder="0" className="h-11 pr-8 bg-[var(--color-surface)] border-[var(--color-border)]" {...editGoalForm.register('progress', { valueAsNumber: true })} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">%</span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-[var(--color-subtle)]">
+                    <div className="h-1.5 rounded-full bg-[var(--color-primary)] transition-all" style={{ width: `${Math.min(100, Math.max(0, editGoalForm.watch('progress') ?? 0))}%` }} />
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">{editGoalForm.watch('progress') ?? 0}%</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Achievement Notes</label>
+              <div className="relative">
+                <Textarea {...editGoalForm.register('achievementNotes')} rows={3} maxLength={1500} placeholder="Document key milestones and achievements..." className="resize-none bg-[var(--color-surface)] border-[var(--color-border)]" />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">{editGoalForm.watch('achievementNotes')?.length ?? 0} / 1500</span>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Hurdles</label>
+              <div className="relative">
+                <Textarea {...editGoalForm.register('hurdles')} rows={3} maxLength={1500} placeholder="Note any challenges or obstacles encountered..." className="resize-none bg-[var(--color-surface)] border-[var(--color-border)]" />
+                <span className="absolute bottom-2 right-3 text-[10px] text-[var(--color-text-muted)]">{editGoalForm.watch('hurdles')?.length ?? 0} / 1500</span>
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => { setEditGoalDialogOpen(false); setEditingGoal(null); editGoalForm.reset(); }}>Cancel</Button>
+              <Button type="submit" disabled={updatingGoal} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white">
+                {updatingGoal ? 'Saving…' : 'Update Goal'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Goal ── */}
+      <Dialog open={deleteGoalDialogOpen} onOpenChange={(o) => { setDeleteGoalDialogOpen(o); if (!o) setDeletingGoalId(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Delete Goal</DialogTitle></DialogHeader>
+          <div className="flex items-start gap-3 py-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[var(--color-text)]">Are you sure you want to delete this Goal?</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">This action cannot be undone.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteGoalDialogOpen(false); setDeletingGoalId(null); }}>Cancel</Button>
+            <Button variant="destructive" disabled={deletingGoal} onClick={() => {
+              if (!deletingGoalId) return;
+              deleteGoal(deletingGoalId, {
+                onSuccess: () => { toast.success('Goal deleted'); setDeleteGoalDialogOpen(false); setDeletingGoalId(null); },
+                onError: () => toast.error('Failed to delete goal'),
+              });
+            }}>
+              {deletingGoal ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── View Medication Plan ── */}
+      <Dialog open={medPlanOpen} onOpenChange={setMedPlanOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-[var(--color-primary)]" />
+              Medication Plan — {participant.firstName} {participant.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          {!medications?.length ? (
+            <div className="py-10 text-center">
+              <Pill className="mx-auto h-10 w-10 text-[var(--color-text-muted)] mb-3 opacity-30" />
+              <p className="text-sm font-medium text-[var(--color-text)]">No medications recorded</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">Go to the Medication tab to add medications.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--color-subtle)]">
+                  <tr>
+                    {['Medication', 'Dosage', 'Frequency', 'Route', 'Prescribed By', 'Start Date', 'End Date'].map((h) => (
+                      <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {medications.map((m: {
+                    id: string; medicationName: string; dosage?: string | null;
+                    frequency?: string | null; route?: string | null;
+                    prescribedBy?: string | null; startDate?: string | null; endDate?: string | null;
+                  }) => (
+                    <tr key={m.id} className="hover:bg-[var(--color-subtle)]">
+                      <td className="px-4 py-3 font-medium text-[var(--color-text)]">{m.medicationName}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.dosage ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.frequency ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.route ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.prescribedBy ?? '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.startDate ? new Date(m.startDate).toLocaleDateString('en-AU') : '—'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{m.endDate ? new Date(m.endDate).toLocaleDateString('en-AU') : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMedPlanOpen(false)}>Close</Button>
+            <Button onClick={() => { setMedPlanOpen(false); setActiveTab('medication'); }}>
+              <Pill className="h-3.5 w-3.5 mr-1.5" />
+              Manage Medications
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Case Note ── */}
+      <Dialog open={editNoteDialogOpen} onOpenChange={(o) => { setEditNoteDialogOpen(o); if (!o) setEditingNote(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Edit Case Note</DialogTitle></DialogHeader>
+          <form className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Subject Line</label>
+              <Input {...editNoteForm.register('subject')} placeholder="Subject line" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Date</label>
+              <Input type="date" {...editNoteForm.register('date')} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Case Note *</label>
+              <Textarea {...editNoteForm.register('content', { required: 'Content is required' })} rows={4} placeholder="Enter case note here..." />
+              {editNoteForm.formState.errors.content && <p className="mt-1 text-xs text-[var(--color-error)]">{editNoteForm.formState.errors.content.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Time Spent</label>
+                <Input {...editNoteForm.register('timeSpent')} placeholder="00:00" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">How Contacted</label>
+                <Select defaultValue={editingNote?.howContacted ?? ''} onValueChange={(v) => editNoteForm.setValue('howContacted', v)}>
+                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Phone">Phone</SelectItem>
+                    <SelectItem value="Email">Email</SelectItem>
+                    <SelectItem value="In Person">In Person</SelectItem>
+                    <SelectItem value="Video Call">Video Call</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text)]">Travel (KM)</label>
+                <Input {...editNoteForm.register('travelKm')} placeholder="0" />
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="peer sr-only" {...editNoteForm.register('billable')} />
+                <div className="relative w-11 h-6 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] transition-all">
+                  <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
+                </div>
+                <span className="text-sm">Billable</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="peer sr-only" {...editNoteForm.register('showToWorker')} />
+                <div className="relative w-11 h-6 bg-[var(--color-subtle)] border border-[var(--color-border)] rounded-full peer-checked:bg-[var(--color-primary)] transition-all">
+                  <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
+                </div>
+                <span className="text-sm">Show to Worker</span>
+              </label>
+            </div>
+          </form>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditNoteDialogOpen(false); setEditingNote(null); }}>Close</Button>
+            <Button
+              onClick={editNoteForm.handleSubmit((data) => {
+                updateCaseNote({ noteId: editingNote.id, ...data } as Record<string, unknown>, {
+                  onSuccess: () => { toast.success('Case note updated'); setEditNoteDialogOpen(false); setEditingNote(null); },
+                  onError: () => toast.error('Failed to update case note'),
+                });
+              })}
+              disabled={updatingNote}
+            >
+              {updatingNote ? 'Saving…' : 'Update'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Case Note ── */}
+      <Dialog open={deleteNoteDialogOpen} onOpenChange={(o) => { setDeleteNoteDialogOpen(o); if (!o) setDeletingNoteId(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Delete Case Note</DialogTitle></DialogHeader>
+          <div className="flex items-start gap-3 py-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-[var(--color-text)]">Are you sure you want to delete this Case Note?</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">This action will be recorded in the audit log.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteNoteDialogOpen(false); setDeletingNoteId(null); }}>Close</Button>
+            <Button
+              variant="destructive"
+              disabled={deletingNote}
+              onClick={() => {
+                if (!deletingNoteId) return;
+                deleteCaseNote(deletingNoteId, {
+                  onSuccess: () => { toast.success('Case note deleted'); setDeleteNoteDialogOpen(false); setDeletingNoteId(null); },
+                  onError: () => toast.error('Failed to delete case note'),
+                });
+              }}
+            >
+              {deletingNote ? 'Deleting…' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

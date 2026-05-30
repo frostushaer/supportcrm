@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 // Global singleton mock store — survives Next.js hot reloads
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const g = global as typeof global & { __mockParticipants?: any[] };
 if (!g.__mockParticipants) {
   g.__mockParticipants = [
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      mockParticipants.unshift(participant as any);
+      mockParticipants.unshift(participant as typeof mockParticipants[0]);
     }
 
     return NextResponse.json({ success: true, data: participant }, { status: 201 });

@@ -1,15 +1,21 @@
 import {
   BarChart3,
+  Building2,
   ClipboardList,
-  CreditCard,
   FileText,
+  HeadphonesIcon,
+  HeartPulse,
+  HelpCircle,
+  Home,
   LayoutDashboard,
   type LucideIcon,
-  MapPin,
+  MessageSquare,
+  ScrollText,
   Settings,
-  Shield,
+  ShieldAlert,
+  Stethoscope,
+  ThumbsDown,
   Users,
-  Wrench,
 } from 'lucide-react';
 
 export interface NavSubItem {
@@ -33,43 +39,24 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: 'Core',
     items: [
       { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
       { title: 'Participants', url: '/participants', icon: Users },
-    ],
-  },
-  {
-    id: 2,
-    label: 'Operations',
-    items: [
-      { title: 'Support Workers', url: '/support-workers', icon: Wrench },
-      { title: 'Shifts', url: '/shifts', icon: ClipboardList },
-      { title: 'Incidents', url: '/incidents', icon: Shield },
-    ],
-  },
-  {
-    id: 3,
-    label: 'Compliance',
-    items: [
-      { title: 'Audits', url: '/audits', icon: FileText },
-      { title: 'Documents', url: '/documents', icon: FileText },
-    ],
-  },
-  {
-    id: 4,
-    label: 'Finance',
-    items: [
-      { title: 'Invoices', url: '/invoices', icon: CreditCard },
-      { title: 'Reports', url: '/reports', icon: BarChart3 },
-    ],
-  },
-  {
-    id: 5,
-    label: 'System',
-    items: [
-      { title: 'Regions', url: '/regions', icon: MapPin },
-      { title: 'Settings', url: '/settings', icon: Settings },
+      { title: 'HRM', url: '/hrm', icon: Building2 },
+      { title: 'Support Coordination', url: '/support-coordination', icon: HeadphonesIcon },
+      { title: 'Allied Health', url: '/allied-health', icon: Stethoscope },
+      { title: 'Rostering', url: '/rostering', icon: ClipboardList },
+      { title: 'Home Management', url: '/home-management', icon: Home },
+      { title: 'Incident Management', url: '/incidents', icon: ShieldAlert },
+      { title: 'Invoicing', url: '/invoices', icon: FileText },
+      { title: 'Reporting', url: '/reports', icon: BarChart3 },
+      { title: 'Forms Management CRM', url: '/forms/crm', icon: ScrollText },
+      { title: 'Forms Management HRM', url: '/forms/hrm', icon: ScrollText },
+      { title: 'Forms Home MGT', url: '/forms/home', icon: ScrollText },
+      { title: 'Policies', url: '/policies', icon: ScrollText },
+      { title: 'Complaints', url: '/complaints', icon: ThumbsDown },
+      { title: 'Feedback', url: '/feedback', icon: MessageSquare },
+      { title: 'Ask a Question', url: '/ask-a-question', icon: HelpCircle },
     ],
   },
 ];
