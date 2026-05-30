@@ -108,7 +108,7 @@ export function FeedbackInfoDialog({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-[var(--color-error)] text-[var(--color-error)] hover:bg-[var(--color-error)] hover:text-white"
+              className="border-[var(--color-error)] text-[var(--color-error)] hover:bg-[var(--color-error)] hover:text-[var(--color-error-contrast)]"
             >
               Close
             </Button>
