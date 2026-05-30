@@ -14,60 +14,62 @@ model Region {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   participants Participant[]
+  questions    Question[]
 }
 
 model Participant {
-  id                          String              @id @default(cuid())
-  firstName                   String
-  lastName                    String
-  gender                      String
-  dateOfBirth                 DateTime
-  languageSpoken              String?
-  culturalBackground          String?
-  ethnicity                   String?
-  aboutMe                     String?             @db.Text
-  primaryEmailAddress         String
-  primaryPhoneNumber          String
-  secondaryPhoneNumber        String?
-  address                     String
-  suburb                      String
-  state                       String
-  postcode                    String
-  emergencyContactName        String?
-  emergencyContactNumber      String?
-  ndisNumber                  String              @unique
-  planNominee                 String?
-  serviceStartDate            DateTime?
-  serviceEndDate              DateTime?
-  serviceSupport              String
-  auditParticipation          Boolean             @default(false)
-  participantConditions       String?
-  importantAlert              String?             @db.Text
-  shiftInstructions           String?             @db.Text
-  externalCoordinatorName     String?
-  externalCoordinatorEmail    String?
-  externalCoordinatorPhone    String?
-  externalCoordinatorCompany  String?
-  status                      String              @default("Active")
-  timezone                    String?
-  planManagedBy               String?
-  regionId                    String
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
-  region                      Region              @relation(fields: [regionId], references: [id])
-  ndisPlans                   NDISPlan[]
-  documents                   Document[]
-  caseNotes                   CaseNote[]
-  medications                 Medication[]
-  shiftNotes                  ShiftNote[]
-  tasks                       Task[]
-  appointments                Appointment[]
-  goals                       Goal[]
-  likes                       Like[]
-  dislikes                    Dislike[]
-  riskAssessments             RiskAssessment[]
-  formSubmissions             FormSubmission[]
-  fundingAllocations          FundingAllocation[]
+  id                         String              @id @default(cuid())
+  firstName                  String
+  lastName                   String
+  gender                     String
+  dateOfBirth                DateTime
+  languageSpoken             String?
+  culturalBackground         String?
+  ethnicity                  String?
+  aboutMe                    String?
+  primaryEmailAddress        String
+  primaryPhoneNumber         String
+  secondaryPhoneNumber       String?
+  address                    String
+  suburb                     String
+  state                      String
+  postcode                   String
+  emergencyContactName       String?
+  emergencyContactNumber     String?
+  ndisNumber                 String              @unique
+  planNominee                String?
+  serviceStartDate           DateTime?
+  serviceEndDate             DateTime?
+  serviceSupport             String
+  auditParticipation         Boolean             @default(false)
+  participantConditions      String?
+  importantAlert             String?
+  shiftInstructions          String?
+  externalCoordinatorName    String?
+  externalCoordinatorEmail   String?
+  externalCoordinatorPhone   String?
+  externalCoordinatorCompany String?
+  status                     String              @default("Active")
+  timezone                   String?
+  planManagedBy              String?
+  regionId                   String
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  appointments               Appointment[]
+  caseNotes                  CaseNote[]
+  dislikes                   Dislike[]
+  documents                  Document[]
+  formSubmissions            FormSubmission[]
+  fundingAllocations         FundingAllocation[]
+  goals                      Goal[]
+  initialAssessment          InitialAssessment?
+  likes                      Like[]
+  medications                Medication[]
+  ndisPlans                  NDISPlan[]
+  region                     Region              @relation(fields: [regionId], references: [id])
+  riskAssessments            RiskAssessment[]
+  shiftNotes                 ShiftNote[]
+  tasks                      Task[]
 }
 
 model NDISPlan {
@@ -80,9 +82,9 @@ model NDISPlan {
   totalAllocated  Float       @default(0)
   totalDelivered  Float       @default(0)
   status          String      @default("Active")
-  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Document {
@@ -93,26 +95,27 @@ model Document {
   fileType      String
   fileSize      Int         @default(0)
   uploadedBy    String
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model CaseNote {
-  id            String      @id @default(cuid())
-  participantId String
-  subject       String?
-  content       String      @db.Text
-  date          DateTime    @default(now())
-  timeSpent     String?
-  howContacted  String?
-  travelKm      String?
-  billable      Boolean     @default(false)
-  showToWorker  Boolean     @default(false)
-  attachmentUrl String?
-  createdBy     String
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  participantId    String
+  subject          String?
+  content          String
+  date             DateTime    @default(now())
+  timeSpent        String?
+  howContacted     String?
+  travelKm         String?
+  billable         Boolean     @default(false)
+  showToWorker     Boolean     @default(false)
+  attachmentUrl    String?
+  createdBy        String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  nonDirectSupport String?
+  participant      Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Medication {
@@ -124,10 +127,10 @@ model Medication {
   prescribedBy   String?
   startDate      DateTime?
   endDate        DateTime?
-  notes          String?     @db.Text
-  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  notes          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model ShiftNote {
@@ -135,25 +138,25 @@ model ShiftNote {
   participantId String
   shiftDate     DateTime
   workerId      String?
-  content       String      @db.Text
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  content       String
   createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Task {
   id            String      @id @default(cuid())
   participantId String
   title         String
-  description   String?     @db.Text
+  description   String?
   dueDate       DateTime?
   dueTime       String?
   priority      String      @default("Medium")
   status        String      @default("Pending")
   category      String?
-  staffNotes    String?     @db.Text
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  staffNotes    String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Appointment {
@@ -163,38 +166,38 @@ model Appointment {
   appointmentDate DateTime
   appointmentTime String?
   location        String?
-  notes           String?     @db.Text
-  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  notes           String?
   createdAt       DateTime    @default(now())
+  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Goal {
   id               String      @id @default(cuid())
   participantId    String
-  description      String      @db.Text
+  description      String
   goalType         String
   progress         Int         @default(0)
-  achievementNotes String?     @db.Text
-  hurdles          String?     @db.Text
-  participant      Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  achievementNotes String?
+  hurdles          String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+  participant      Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Like {
   id            String      @id @default(cuid())
   participantId String
   description   String
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model Dislike {
   id            String      @id @default(cuid())
   participantId String
   description   String
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model RiskAssessment {
@@ -208,9 +211,76 @@ model RiskAssessment {
   submittedDate DateTime?
   expiryDate    DateTime?
   createdBy     String
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+}
+
+model InitialAssessment {
+  id                     String      @id @default(cuid())
+  participantId          String      @unique
+  languageSpoken         String?
+  culturalBackground     String?
+  ethnicity              String?
+  aboutMe                String?
+  planValidUntil         DateTime?
+  medicalProviders       Json?
+  interests              Json?
+  strength               String?
+  areasForImprovement    String?
+  participantPreferences String?
+  aboriginal             String?
+  culturalPractices      String?
+  genderRestriction      String?
+  specialConsiderations  String?
+  educationLevel         String?
+  educationNotes         String?
+  employmentStatus       String?
+  employmentNotes        String?
+  primaryDisability      String?
+  secondaryDisability    String?
+  physicalRestrictions   String?
+  hearingImpairment      String?
+  visualImpairment       String?
+  communicateNeeds       String?
+  nonVerbalMethod        String?
+  communicationAid       String?
+  followInstructions     String?
+  respondToName          String?
+  communicatePain        String?
+  communicationNotes     String?
+  dependency             String?
+  needsPhysicalSupport   String?
+  usesWheelchair         String?
+  physicalAssistance     String?
+  physicalActivities     Json?
+  physicalOther          String?
+  degreeOfReliance       String?
+  behaviorsOfConcern     Json?
+  behaviorTriggers       String?
+  behaviorStrategies     String?
+  servicesRequired       Json?
+  medicationNotes        String?
+  medicationAllergies    String?
+  morningRoutine         String?
+  afternoonRoutine       String?
+  eveningRoutine         String?
+  importantNumbers       Json?
+  importantServices      Json?
+  insuranceProvider      String?
+  insurancePolicyNumber  String?
+  importantItems         Json?
+  emergencyPlan          String?
+  evacuationPlan         String?
+  participantSignature   String?
+  participantSignDate    DateTime?
+  staffSignature         String?
+  staffSignDate          DateTime?
+  status                 String      @default("Draft")
+  submittedAt            DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  participant            Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model FormSubmission {
@@ -224,23 +294,39 @@ model FormSubmission {
   lastUpdatedDate DateTime?
   expiryDate      DateTime?
   version         Int         @default(1)
-  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  participant     Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
 model FundingAllocation {
-  id            String      @id @default(cuid())
-  participantId String
-  fundingId     String
-  startDate     DateTime
-  endDate       DateTime
-  totalFunding  Float
-  totalAllocated Float      @default(0)
-  totalDelivered Float      @default(0)
-  unallocated   Float       @default(0)
-  status        String      @default("Active")
-  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  participantId  String
+  fundingId      String
+  startDate      DateTime
+  endDate        DateTime
+  totalFunding   Float
+  totalAllocated Float       @default(0)
+  totalDelivered Float       @default(0)
+  unallocated    Float       @default(0)
+  status         String      @default("Active")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  participant    Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  category    String
+  details     String   @db.Text
+  userRole    String?
+  submittedBy String
+  regionId    String?
+
+  region      Region?  @relation(fields: [regionId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

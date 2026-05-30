@@ -10,7 +10,30 @@
 
 ## Current Goal
 
-**TBD — Phase 3 Enhanced complete. Ready for next module.**
+**Ask a Question Module (spec-10) — COMPLETE**
+
+---
+
+## Completed
+
+### ✅ Ask a Question Module — Full Feature Spec (spec-10)
+
+- [x] Step 1: Prisma schema — `Question` model added with fields: id, name, subject, category, details, userRole, submittedBy, regionId, createdAt, updatedAt
+- [x] Step 2: `pnpm prisma generate` — Prisma Client regenerated with Question model
+- [x] Step 3: Zod validation schema — `questionSchema` in `lib/validations/questions.ts` (name, subject, category, details, userRole, regionId)
+- [x] Step 4: API routes — `GET/POST /api/questions` (list with search + create), `GET /api/questions/[id]` (single question)
+- [x] Step 5: TanStack Query hooks — `useQuestions`, `useQuestion`, `useCreateQuestion` in `hooks/use-questions.ts`
+- [x] Step 6: Main page — `/ask-a-question` with DataTable, region filter, search, empty state
+- [x] Step 7: Ask Question Dialog — `AskQuestionDialog` component with form (name, subject, category, details)
+- [x] Step 8: Question Info Dialog — `QuestionInfoDialog` component for viewing question details
+- [x] Step 9: `pnpm build` passes clean — 18 routes, 0 TypeScript errors
+
+**Notes:**
+- Migration pending database reset (Prisma schema ready, client generated)
+- Categories: Accounting, Compliance, IT, Legal Query, Marketing, Plan Review, Operations, HR, Finance
+- Region filter integrated with global `regionStore`
+- User role auto-populated from session
+- Empty state: "Ask Vertex360 SME your first question!"
 
 ---
 

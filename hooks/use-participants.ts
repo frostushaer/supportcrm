@@ -119,6 +119,34 @@ export function useCreateCaseNote(participantId: string) {
   });
 }
 
+export function useUpdateCaseNote(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`/api/participants/${participantId}/case-notes`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update case note');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['caseNotes', participantId] }),
+  });
+}
+
+export function useDeleteCaseNote(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (noteId: string) => {
+      const res = await fetch(`/api/participants/${participantId}/case-notes`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ noteId }),
+      });
+      if (!res.ok) throw new Error('Failed to delete case note');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['caseNotes', participantId] }),
+  });
+}
+
 export function useTasks(participantId: string) {
   return useQuery({
     queryKey: ['tasks', participantId],
@@ -171,6 +199,34 @@ export function useCreateGoal(participantId: string) {
   });
 }
 
+export function useUpdateGoal(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`/api/participants/${participantId}/goals`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update goal');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', participantId] }),
+  });
+}
+
+export function useDeleteGoal(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (goalId: string) => {
+      const res = await fetch(`/api/participants/${participantId}/goals`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goalId }),
+      });
+      if (!res.ok) throw new Error('Failed to delete goal');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['goals', participantId] }),
+  });
+}
+
 export function useMedications(participantId: string) {
   return useQuery({
     queryKey: ['medications', participantId],
@@ -191,6 +247,34 @@ export function useCreateMedication(participantId: string) {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed to create medication');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['medications', participantId] }),
+  });
+}
+
+export function useUpdateMedication(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ medicationId, ...data }: { medicationId: string } & Record<string, unknown>) => {
+      const res = await fetch(`/api/participants/${participantId}/medications/${medicationId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update medication');
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['medications', participantId] }),
+  });
+}
+
+export function useDeleteMedication(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (medicationId: string) => {
+      const res = await fetch(`/api/participants/${participantId}/medications/${medicationId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete medication');
       return res.json();
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['medications', participantId] }),
@@ -220,5 +304,34 @@ export function useCreateAppointment(participantId: string) {
       return res.json();
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['appointments', participantId] }),
+  });
+}
+
+export function useInitialAssessment(participantId: string) {
+  return useQuery({
+    queryKey: ['initial-assessment', participantId],
+    queryFn: async () => {
+      const res = await fetch(`/api/participants/${participantId}/initial-assessment`);
+      if (!res.ok) throw new Error('Failed to fetch initial assessment');
+      return res.json();
+    },
+    enabled: !!participantId,
+  });
+}
+
+export function useSaveInitialAssessment(participantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await fetch(`/api/participants/${participantId}/initial-assessment`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to save initial assessment');
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['initial-assessment', participantId] });
+      qc.invalidateQueries({ queryKey: ['participant', participantId] });
+    },
   });
 }

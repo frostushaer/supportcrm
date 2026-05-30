@@ -46,7 +46,7 @@ export const caseNoteSchema = z.object({
   timeSpent: z.string().optional(),
   howContacted: z.string().optional(),
   travelKm: z.string().optional(),
-  nonDirectSupport: z.string().optional(),
+  nonDirectSupport: z.string().optional().nullable(),
   billable: z.boolean().optional(),
   showToWorker: z.boolean().optional(),
 });
@@ -68,7 +68,7 @@ export type TaskFormData = z.infer<typeof taskSchema>;
 
 export const goalSchema = z.object({
   description: z.string().min(1, 'Description is required'),
-  goalType: z.enum(['Short Term', 'Long Term']),
+  goalType: z.enum(['Short Term', 'Medium Term', 'Long Term']),
   progress: z.number().min(0).max(100).optional(),
   achievementNotes: z.string().optional(),
   hurdles: z.string().optional(),
@@ -78,11 +78,14 @@ export type GoalFormData = z.infer<typeof goalSchema>;
 
 export const medicationSchema = z.object({
   medicationName: z.string().min(1, 'Medication name is required'),
+  medicineType: z.string().optional(),
   dosage: z.string().optional(),
   frequency: z.string().optional(),
   prescribedBy: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  instructions: z.string().optional(),
+  sideEffects: z.string().optional(),
   notes: z.string().optional(),
 });
 
