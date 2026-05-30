@@ -17,11 +17,11 @@ export default function FeedbackPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewFeedbackId, setViewFeedbackId] = useState<string | null>(null);
   const [editFeedbackId, setEditFeedbackId] = useState<string | null>(null);
-  
+
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  
+
   // Debounce search input (300ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -29,7 +29,7 @@ export default function FeedbackPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
-  
+
   const { selectedRegionId, setSelectedRegionId } = useRegionStore();
   const { data: feedbacks, isLoading } = useFeedbacks(search, statusFilter);
 
