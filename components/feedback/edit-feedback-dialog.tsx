@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { feedbackSchema, type FeedbackFormData } from '@/lib/validations/feedback';
+import { feedbackSchema, type FeedbackFormData, FEEDBACK_CATEGORIES } from '@/lib/validations/feedback';
 import { useFeedback, useUpdateFeedback } from '@/hooks/use-feedback';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,16 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-
-const CATEGORIES = [
-  'General',
-  'IT Support',
-  'HR',
-  'Finance',
-  'Operations',
-  'Compliance',
-  'Other',
-];
 
 interface EditFeedbackDialogProps {
   feedbackId: string;
@@ -131,13 +121,13 @@ export function EditFeedbackDialog({ feedbackId, open, onOpenChange }: EditFeedb
             </label>
             <Select
               value={watch('category')}
-              onValueChange={(value) => setValue('category', value)}
+              onValueChange={(value) => setValue('category', value as typeof FEEDBACK_CATEGORIES[number])}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Please select the category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((category) => (
+                {FEEDBACK_CATEGORIES.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>

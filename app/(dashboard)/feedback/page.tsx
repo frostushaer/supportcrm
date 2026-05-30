@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable } from '@/components/shared/data-table';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,17 @@ export default function FeedbackPage() {
   const [viewFeedbackId, setViewFeedbackId] = useState<string | null>(null);
   const [editFeedbackId, setEditFeedbackId] = useState<string | null>(null);
   
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  
+  // Debounce search input (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   
   const { selectedRegionId, setSelectedRegionId } = useRegionStore();
   const { data: feedbacks, isLoading } = useFeedbacks(search, statusFilter);
@@ -102,10 +111,10 @@ export default function FeedbackPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Regions</SelectItem>
-                  <SelectItem value="region-1">Brisbane</SelectItem>
-                  <SelectItem value="region-2">Sydney</SelectItem>
-                  <SelectItem value="region-3">Melbourne</SelectItem>
-                  <SelectItem value="region-4">Perth</SelectItem>
+                  <SelectItem value="region_1">Brisbane</SelectItem>
+                  <SelectItem value="region_2">Sydney</SelectItem>
+                  <SelectItem value="region_3">Melbourne</SelectItem>
+                  <SelectItem value="region_4">Perth</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -139,8 +148,8 @@ export default function FeedbackPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
             <Input
               placeholder="Search feedback..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10 h-9"
             />
           </div>
