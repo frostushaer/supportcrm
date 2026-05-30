@@ -25,19 +25,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useCreateQuestion } from '@/hooks/use-questions';
-import { questionSchema, type QuestionFormData } from '@/lib/validations/questions';
-
-const CATEGORIES = [
-  'Accounting',
-  'Compliance',
-  'IT',
-  'Legal Query',
-  'Marketing',
-  'Plan Review',
-  'Operations',
-  'HR',
-  'Finance',
-];
+import { questionSchema, type QuestionFormData, QUESTION_CATEGORIES } from '@/lib/validations/questions';
 
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -135,13 +123,13 @@ export function AskQuestionDialog({ open, onOpenChange }: AskQuestionDialogProps
               <FieldLabel required>Category</FieldLabel>
               <Select
                 value={watch('category')}
-                onValueChange={(value) => setValue('category', value)}
+                onValueChange={(value) => setValue('category', value as typeof QUESTION_CATEGORIES[number])}
               >
                 <SelectTrigger className="h-10 w-full">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((category) => (
+                  {QUESTION_CATEGORIES.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>

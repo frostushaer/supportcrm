@@ -15,6 +15,7 @@ model Region {
   updatedAt    DateTime      @updatedAt
   participants Participant[]
   questions    Question[]
+  feedbacks    Feedback[]
 }
 
 model Participant {
@@ -330,3 +331,23 @@ model Question {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Feedback {
+  id             String   @id @default(cuid())
+  name           String
+  subject        String
+  category       String
+  details        String   @db.Text
+  attachmentUrl  String?
+  attachmentName String?
+  status         String   @default("New")
+  userRole       String?
+  submittedBy    String
+  regionId       String?
+
+  region         Region?  @relation(fields: [regionId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+

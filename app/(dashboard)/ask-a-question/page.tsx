@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, Plus, MessageCircle, HelpCircle } from 'lucide-react';
+import { Search, Eye, Plus, HelpCircle } from 'lucide-react';
 import { AskQuestionDialog } from '@/components/ask-a-question/ask-question-dialog';
 import { QuestionInfoDialog } from '@/components/ask-a-question/question-info-dialog';
 import { useQuestions } from '@/hooks/use-questions';
 import { EmptyState } from '@/components/shared/empty-state';
+import { useRegionStore } from '@/store/region-store';
 import {
   Select,
   SelectContent,
@@ -27,31 +28,22 @@ interface Question {
   createdAt: string;
 }
 
-const CATEGORIES = [
-  'Accounting',
-  'Compliance',
-  'IT',
-  'Legal Query',
-  'Marketing',
-  'Plan Review',
-  'Operations',
-  'HR',
-  'Finance',
-];
+import { QUESTION_CATEGORIES } from '@/lib/validations/questions';
 
-const getCategoryColor = (category: string) => {
-  const colors: Record<string, string> = {
-    'Accounting': 'bg-blue-50 text-blue-700 border-blue-200',
-    'Compliance': 'bg-green-50 text-green-700 border-green-200',
-    'IT': 'bg-purple-50 text-purple-700 border-purple-200',
-    'Legal Query': 'bg-red-50 text-red-700 border-red-200',
-    'Marketing': 'bg-pink-50 text-pink-700 border-pink-200',
-    'Plan Review': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Operations': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    'HR': 'bg-teal-50 text-teal-700 border-teal-200',
-    'Finance': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+const getCategoryStyle = (category: string) => {
+  // Use inline styles with HSL colors to avoid Tailwind class limitations
+  const styles: Record<string, { bg: string; text: string; border: string }> = {
+    'Accounting': { bg: 'hsl(210 100% 96%)', text: 'hsl(210 80% 45%)', border: 'hsl(210 60% 85%)' },
+    'Compliance': { bg: 'hsl(140 60% 95%)', text: 'hsl(140 60% 35%)', border: 'hsl(140 40% 80%)' },
+    'IT': { bg: 'hsl(270 60% 96%)', text: 'hsl(270 60% 45%)', border: 'hsl(270 40% 85%)' },
+    'Legal Query': { bg: 'hsl(0 70% 96%)', text: 'hsl(0 70% 45%)', border: 'hsl(0 50% 85%)' },
+    'Marketing': { bg: 'hsl(320 70% 96%)', text: 'hsl(320 70% 45%)', border: 'hsl(320 50% 85%)' },
+    'Plan Review': { bg: 'hsl(25 90% 96%)', text: 'hsl(25 90% 40%)', border: 'hsl(25 70% 85%)' },
+    'Operations': { bg: 'hsl(180 60% 95%)', text: 'hsl(180 60% 35%)', border: 'hsl(180 40% 80%)' },
+    'HR': { bg: 'hsl(160 60% 95%)', text: 'hsl(160 60% 35%)', border: 'hsl(160 40% 80%)' },
+    'Finance': { bg: 'hsl(240 60% 96%)', text: 'hsl(240 60% 45%)', border: 'hsl(240 40% 85%)' },
   };
-  return colors[category] || 'bg-gray-50 text-gray-700 border-gray-200';
+  return styles[category] || { bg: 'var(--color-subtle)', text: 'var(--color-text-secondary)', border: 'var(--color-border)' };
 };
 
 const getCategoryInitials = (category: string) => {
@@ -64,7 +56,8 @@ export default function AskQuestionPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const { data: questions, isLoading, isError } = useQuestions(search);
+  const { selectedRegionId } = useRegionStore();
+  const { data: questions, isLoading, isError } = useQuestions(selectedRegionId, search);
 
   const filtered = (questions as Question[] | undefined)?.filter((q) => {
     if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
@@ -105,7 +98,7 @@ export default function AskQuestionPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {CATEGORIES.map((cat) => (
+                {QUESTION_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>
@@ -151,12 +144,26 @@ export default function AskQuestionPage() {
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${getCategoryColor(q.category)}`}>
-                              {getCategoryInitials(q.category)}
-                            </div>
-                            <Badge variant="secondary" className={`text-xs ${getCategoryColor(q.category)}`}>
-                              {q.category}
-                            </Badge>
+                            {(() => {
+                              const style = getCategoryStyle(q.category);
+                              return (
+                                <>
+                                  <div
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                                    style={{ backgroundColor: style.bg, color: style.text, border: `1px solid ${style.border}` }}
+                                  >
+                                    {getCategoryInitials(q.category)}
+                                  </div>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                    style={{ backgroundColor: style.bg, color: style.text, border: `1px solid ${style.border}` }}
+                                  >
+                                    {q.category}
+                                  </Badge>
+                                </>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="px-4 py-3">

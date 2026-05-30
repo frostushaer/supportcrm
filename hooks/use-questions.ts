@@ -1,12 +1,9 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRegionStore } from '@/store/region-store';
 import type { QuestionFormData } from '@/lib/validations/questions';
 
-export function useQuestions(search?: string) {
-  const { selectedRegionId } = useRegionStore();
-
+export function useQuestions(selectedRegionId: string | null, search?: string) {
   return useQuery({
     queryKey: ['questions', selectedRegionId, search],
     queryFn: async () => {
