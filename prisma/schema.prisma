@@ -19,6 +19,10 @@ model Region {
   complaints   Complaint[]
   policies     Policy[]
   formTemplates FormTemplate[]
+  workers      Worker[]
+  homes        HomeProperty[]
+  incidents    Incident[]
+  shifts       Shift[]
 }
 
 model Participant {
@@ -74,6 +78,8 @@ model Participant {
   riskAssessments            RiskAssessment[]
   shiftNotes                 ShiftNote[]
   tasks                      Task[]
+  shifts                     Shift[]
+  incidents                  Incident[]
 }
 
 model NDISPlan {
@@ -461,3 +467,116 @@ model FormField {
   @@index([formSectionId])
   @@index([formSubSectionId])
 }
+
+// Staff/Support Worker
+model Worker {
+  id                  String   @id @default(cuid())
+  firstName           String
+  lastName            String
+  email               String   @unique
+  phoneNumber         String
+  role                String   // Support Worker, Allied Health, Support Coordinator
+  status              String   // Active, Inactive, On Leave
+  policeCheckExpiry   DateTime?
+  wwccExpiry          DateTime?
+  regionId            String
+
+  region              Region   @relation(fields: [regionId], references: [id])
+  shifts              Shift[]
+  incidentsReported   Incident[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// SIL/SDA Property
+model HomeProperty {
+  id                  String   @id @default(cuid())
+  regionId            String
+  streetAddress       String
+  suburb              String
+  state               String
+  postalCode          String
+  propertyType        String
+  sdaType             String?  // Specialist Disability Accommodation
+  totalRooms          Int
+  totalBathrooms      Int
+  totalKitchens       Int
+  totalParkingSpaces  Int
+  totalSharedSpaces   Int
+  hasFrontYard        Boolean  @default(false)
+  hasBackyard         Boolean  @default(false)
+  hasSwimmingPool     Boolean  @default(false)
+  vacancyStatus       String   // Available, Full, Partial
+  status              String   // Active, Inactive
+
+  region              Region   @relation(fields: [regionId], references: [id])
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// Incident reporting
+model Incident {
+  id                String      @id @default(cuid())
+  participantId     String
+  reportedById      String
+  workersInvolved   String[]    // JSON array of worker IDs
+  incidentDate      DateTime
+  reportableType    String      // Reportable, Non-Reportable
+  outcomeType       String
+  description       String      @db.Text
+  status            String      // Draft, Submitted, Under Review, Resolved
+  regionId          String
+
+  participant       Participant @relation(fields: [participantId], references: [id])
+  reportedBy        Worker      @relation(fields: [reportedById], references: [id])
+  region            Region      @relation(fields: [regionId], references: [id])
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+// Rostering & Shifts
+model Shift {
+  id              String      @id @default(cuid())
+  participantId   String
+  workerId        String
+  supportItem     String      // NDIS support item code
+  startDateTime   DateTime
+  endDateTime     DateTime
+  status          String      // Scheduled, Completed, Cancelled
+  regionId        String
+  overtime        String?
+
+  participant     Participant @relation(fields: [participantId], references: [id])
+  worker          Worker      @relation(fields: [workerId], references: [id])
+  region          Region      @relation(fields: [regionId], references: [id])
+  timesheet       Timesheet?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Timesheet for invoicing
+model Timesheet {
+  id              String   @id @default(cuid())
+  shiftId         String   @unique
+  actualStartTime DateTime
+  actualEndTime   DateTime
+  breakMinutes    Int      @default(0)
+  totalHours      Float
+  approvedBy      String?
+  approvedAt      DateTime?
+  status          String   // Pending, Approved, Rejected
+  shiftNotes      String?
+  incidents       Int      @default(0)
+  kms             Float    @default(0)
+  associatedCost  Float    @default(0)
+
+  shift           Shift    @relation(fields: [shiftId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

@@ -49,7 +49,7 @@ export const sidebarItems: NavGroup[] = [
       { title: 'Home Management', url: '/home-management', icon: Home },
       { title: 'Incident Management', url: '/incidents', icon: ShieldAlert },
       { title: 'Invoicing', url: '/invoices', icon: FileText },
-      { title: 'Reporting', url: '/reports', icon: BarChart3 },
+      { title: 'Reporting', url: '/reporting', icon: BarChart3 },
       { title: 'Forms Management CRM', url: '/forms-crm', icon: ScrollText },
       { title: 'Forms Management HRM', url: '/forms-hrm', icon: ScrollText },
       { title: 'Forms Home MGT', url: '/forms-home-mgt', icon: ScrollText },
