@@ -16,42 +16,42 @@ export default function ReportingDashboardPage() {
           title="ROC Report"
           description="View rostered shifts and schedules over time"
           icon={CalendarClock}
-          href="/reporting/roc-reports"
+          href="/reports/roc-reports"
           accentColor="#0ea5e9"
         />
         <ReportTile
           title="ROC Weekly Report"
           description="Weekly summary of worker hours and overtime"
           icon={Clock}
-          href="/reporting/roc-weekly-reports"
+          href="/reports/roc-weekly-reports"
           accentColor="#8b5cf6"
         />
         <ReportTile
           title="Timesheet Report"
           description="Line-by-line view of submitted timesheets"
           icon={ClipboardList}
-          href="/reporting/timesheet-reports"
+          href="/reports/timesheet-reports"
           accentColor="#10b981"
         />
         <ReportTile
           title="Payroll Report"
           description="Summarise worker hours by day and OT category"
           icon={FileSpreadsheet}
-          href="/reporting/payroll-reports"
+          href="/reports/payroll-reports"
           accentColor="#f59e0b"
         />
         <ReportTile
           title="Feedback Report"
           description="Analyze feedback submissions and categories"
           icon={MessageSquare}
-          href="/reporting/feedback-reports"
+          href="/reports/feedback-reports"
           accentColor="#3b82f6"
         />
         <ReportTile
           title="Complaints Report"
           description="Track and manage complaints"
           icon={ThumbsDown}
-          href="/reporting/complaints-reports"
+          href="/reports/complaints-reports"
           accentColor="#ef4444"
         />
         <ReportTile
