@@ -10,11 +10,32 @@
 
 ## Current Goal
 
-**Feedback Module (spec-11) — COMPLETE**
+**Forms Home MGT Module (spec-14) — COMPLETE**
 
 ---
 
 ## Completed
+
+### ✅ Forms Home MGT Module — Form Builder & List (spec-14)
+
+- [x] Step 1: Prisma models — `FormTemplate`, `FormSection`, `FormSubSection`, `FormField`
+- [x] Step 2: API routes — `GET/POST /api/home-forms` and `GET/PATCH/DELETE /api/home-forms/[id]`
+- [x] Step 3: TanStack Query hooks — `useHomeForms`, `useHomeForm`, `useCreateHomeForm`, `useUpdateHomeForm`, `useDeleteHomeForm`
+- [x] Step 4: List page — `/forms-home-mgt` with filters, search, and delete
+- [x] Step 5: Builder components — Dialogs and main `FormBuilder`
+- [x] Step 6: Builder pages — `/forms-home-mgt/new` and `/forms-home-mgt/[id]/edit`
+- [x] Step 7: Viewer page — `/forms-home-mgt/[id]/view`
+- [x] Step 8: Database synced and `pnpm build` passes clean.
+
+### ✅ Policies Module — Full Feature Spec (spec-13)
+
+- [x] Step 1: Prisma schema — `Policy` model added
+- [x] Step 2: Validation schema — `lib/validations/policies.ts`
+- [x] Step 3: API routes — `GET/POST /api/policies`, `GET/DELETE /api/policies/[id]`
+- [x] Step 4: TanStack Query hooks — `usePolicies`, `usePolicy`, `useCreatePolicy`, `useDeletePolicy`
+- [x] Step 5: Main page — `/policies` with Region selector, Search, Table, and Empty state
+- [x] Step 6: Dialogs — `AddPolicyDialog` (with drag & drop upload zone), `PolicyInfoDialog`, `DeletePolicyDialog`
+- [x] Step 7: Database synced and `pnpm build` passes clean.
 
 ### ✅ Feedback Module — Full Feature Spec (spec-11)
 
@@ -24,7 +45,7 @@
 - [x] Step 4: TanStack Query hooks — `useFeedbacks`, `useFeedback`, `useCreateFeedback`, `useUpdateFeedback`, `useDeleteFeedback`
 - [x] Step 5: Main page — `/feedback` with DataTable, filters, search, empty state
 - [x] Step 6: Dialogs — `AddFeedbackDialog`, `FeedbackInfoDialog` (with status change dropdown), `EditFeedbackDialog`
-- [x] Step 7: Migration generated (pending DB reset) and `pnpm build` passes clean.
+- [x] Step 7: Migration generated and database synced (`pnpm prisma db push`). `pnpm build` passes clean.
 
 ---
 
