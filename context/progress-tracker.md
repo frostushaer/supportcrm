@@ -10,11 +10,31 @@
 
 ## Current Goal
 
-**Forms Home MGT Module (spec-14) — COMPLETE**
+**Forms HRM Module (spec-15) — COMPLETE**
 
 ---
 
-## Completed
+### ✅ Forms CRM Module (spec-16)
+
+- [x] Step 1: Confirm `FormTemplate` model supports `kind='CRM'`
+- [x] Step 2: Implement CRM-specific API routes `GET/POST /api/crm-forms`, `GET/PATCH/DELETE /api/crm-forms/[id]`
+- [x] Step 3: Implement TanStack Query hooks in `hooks/use-crm-forms.ts`
+- [x] Step 4: Create `/forms-crm` page with category filter and columns
+- [x] Step 5: Create `/forms-crm/new` and `/forms-crm/[id]/edit` pages with CRM categories
+- [x] Step 6: Create `/forms-crm/[id]/view` page
+- [x] Step 7: Refactor `FormBuilder` to accept `CRM` kind type definition
+- [x] Step 8: `pnpm build` passes clean.
+
+### ✅ Forms HRM Module (spec-15)
+
+- [x] Step 1: Extend FormTemplate model mapping kind to HRM.
+- [x] Step 2: Implement HRM-specific API routes `GET/POST /api/hrm-forms`, `GET/PATCH/DELETE /api/hrm-forms/[id]`
+- [x] Step 3: Implement TanStack Query hooks `useHrmForms`, `useHrmForm`, `useCreateHrmForm`, `useUpdateHrmForm`, `useDeleteHrmForm`
+- [x] Step 4: Create `/forms-hrm` page
+- [x] Step 5: Reuse `FormBuilder` for `/forms-hrm/new` and `/forms-hrm/[id]/edit` pages
+- [x] Step 6: Create `/forms-hrm/[id]/view` page
+- [x] Step 7: Refactor `FormBuilder` to accept generic `kind`, `categories`, and `callbacks`
+- [x] Step 8: `pnpm build` passes clean.
 
 ### ✅ Forms Home MGT Module — Form Builder & List (spec-14)
 

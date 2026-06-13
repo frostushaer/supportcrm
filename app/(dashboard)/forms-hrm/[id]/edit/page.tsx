@@ -2,15 +2,15 @@
 
 import { use } from 'react';
 import { FormBuilder } from '@/components/forms-home-mgt/form-builder';
-import { useHomeForm, useUpdateHomeForm } from '@/hooks/use-home-forms';
+import { useHrmForm, useUpdateHrmForm } from '@/hooks/use-hrm-forms';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-export default function EditHomeFormPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditHRMFormPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const { data, isLoading } = useHomeForm(resolvedParams.id);
-  const updateForm = useUpdateHomeForm(resolvedParams.id);
+  const { data, isLoading } = useHrmForm(resolvedParams.id);
+  const updateForm = useUpdateHrmForm(resolvedParams.id);
 
   if (isLoading) {
     return <div className="p-6">Loading form...</div>;
@@ -23,15 +23,16 @@ export default function EditHomeFormPage({ params }: { params: Promise<{ id: str
   const handleSave = async (payload: import('@/lib/validations/forms-home-mgt').FormTemplateInput, status: 'Draft' | 'Published') => {
     await updateForm.mutateAsync(payload);
     toast.success(`Form ${status === 'Draft' ? 'saved as draft' : 'published'} successfully`);
-    router.push('/forms-home-mgt');
+    router.push('/forms-hrm');
   };
 
   return (
     <FormBuilder 
       initialData={data.data}
-      categories={['Property Management', 'Participant Management']}
+      kind="HRM"
+      categories={['Onboarding', 'Performance', 'Leave', 'General']}
       onSave={handleSave}
-      onCancel={() => router.push('/forms-home-mgt')}
+      onCancel={() => router.push('/forms-hrm')}
     />
   );
 }
