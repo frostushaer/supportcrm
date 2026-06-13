@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRegionStore } from '@/store/region-store';
-import { useHomeForms, useDeleteHomeForm } from '@/hooks/use-home-forms';
+import { useHrmForms, useDeleteHrmForm } from '@/hooks/use-hrm-forms';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,15 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Plus, Pencil, Eye, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function FormsHomeMgtPage() {
+export default function FormsHRMPage() {
   const { selectedRegionId } = useRegionStore();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('all');
 
-  const { data, isLoading } = useHomeForms(selectedRegionId || undefined, status, search);
+  const { data, isLoading } = useHrmForms(selectedRegionId || undefined, status, search);
   const forms = data?.data || [];
 
-  const deleteForm = useDeleteHomeForm();
+  const deleteForm = useDeleteHrmForm();
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this form?')) {
@@ -36,14 +36,14 @@ export default function FormsHomeMgtPage() {
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--color-text)]">Forms</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">All your Forms in one place</p>
+          <h1 className="text-2xl font-semibold text-[var(--color-text)]">HRM Forms</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Manage HR specific Forms</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/forms-home-mgt/new">
+          <Link href="/forms-hrm/new">
             <Button className="bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 gap-2">
               <Plus className="h-4 w-4" />
-              Create Home Forms
+              Create HRM Forms
             </Button>
           </Link>
         </div>
@@ -81,7 +81,6 @@ export default function FormsHomeMgtPage() {
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Subcategory</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[150px]">Action</TableHead>
             </TableRow>
@@ -89,13 +88,13 @@ export default function FormsHomeMgtPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={4} className="text-center py-8">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : forms.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[var(--color-text-secondary)]">
+                <TableCell colSpan={4} className="text-center py-8 text-[var(--color-text-secondary)]">
                   No Data Found !
                 </TableCell>
               </TableRow>
@@ -107,9 +106,6 @@ export default function FormsHomeMgtPage() {
                   </TableCell>
                   <TableCell className="text-[var(--color-text-secondary)]">
                     {form.category}
-                  </TableCell>
-                  <TableCell className="text-[var(--color-text-secondary)]">
-                    {form.subcategory || '-'}
                   </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -124,12 +120,12 @@ export default function FormsHomeMgtPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Link href={`/forms-home-mgt/${form.id}/edit`}>
+                      <Link href={`/forms-hrm/${form.id}/edit`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50">
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Link href={`/forms-home-mgt/${form.id}/view`}>
+                      <Link href={`/forms-hrm/${form.id}/view`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50">
                           <Eye className="h-4 w-4" />
                         </Button>

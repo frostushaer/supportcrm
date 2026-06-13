@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,11 +9,16 @@ import { MoreVertical, Plus } from 'lucide-react';
 import { AddNewSectionDialog } from './add-new-section-dialog';
 import { AddNewSubSectionDialog } from './add-new-sub-section-dialog';
 import { AddSectionFieldDialog, FieldData } from './add-section-field-dialog';
-import { useCreateHomeForm, useUpdateHomeForm, FormTemplate } from '@/hooks/use-home-forms';
+import { FormTemplate } from '@/hooks/use-home-forms';
+import { FormTemplateInput } from '@/lib/validations/forms-home-mgt';
 import { toast } from 'sonner';
 
 export interface FormBuilderProps {
   initialData?: FormTemplate;
+  kind?: 'HomeMgt' | 'HRM' | 'CRM';
+  categories: string[];
+  onSave: (payload: FormTemplateInput, status: 'Draft' | 'Published') => Promise<void>;
+  onCancel: () => void;
 }
 
 export type BuilderSection = {
@@ -31,9 +35,7 @@ export type BuilderSubSection = {
   fields?: FieldData[];
 };
 
-export function FormBuilder({ initialData }: FormBuilderProps) {
-  const router = useRouter();
-  
+export function FormBuilder({ initialData, kind = 'HomeMgt', categories, onSave, onCancel }: FormBuilderProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [category, setCategory] = useState(initialData?.category || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -41,9 +43,6 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
   const [sections, setSections] = useState<BuilderSection[]>(
     (initialData?.sections as unknown as BuilderSection[]) || []
   );
-
-  const createForm = useCreateHomeForm();
-  const updateForm = useUpdateHomeForm(initialData?.id || '');
 
   const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
   const [isSubSectionDialogOpen, setIsSubSectionDialogOpen] = useState(false);
@@ -94,21 +93,14 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
       category,
       description,
       status,
+      kind,
       sections,
     };
 
     try {
-      if (initialData) {
-        await updateForm.mutateAsync(payload);
-        toast.success(`Form ${status === 'Draft' ? 'saved as draft' : 'published'} successfully`);
-      } else {
-        await createForm.mutateAsync(payload);
-        toast.success(`Form ${status === 'Draft' ? 'saved as draft' : 'published'} successfully`);
-      }
-      router.push('/forms-home-mgt');
+      await onSave(payload, status);
     } catch (error) {
-      // Ignore
-      toast.error('Failed to save form');
+      // Handled by the hook / caller
     }
   };
 
@@ -156,8 +148,9 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
                 <SelectValue placeholder="Select Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Property Management">Property Management</SelectItem>
-                <SelectItem value="Participant Management">Participant Management</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -251,7 +244,7 @@ export function FormBuilder({ initialData }: FormBuilderProps) {
       </div>
 
       <div className="flex justify-end items-center gap-4 mt-8">
-        <Button variant="outline" onClick={() => router.push('/forms-home-mgt')}>
+        <Button variant="outline" onClick={onCancel}>
           Clear & Exit
         </Button>
         <Button variant="outline" onClick={() => saveForm('Draft')}>

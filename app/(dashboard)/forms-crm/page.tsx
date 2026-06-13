@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRegionStore } from '@/store/region-store';
-import { useHomeForms, useDeleteHomeForm } from '@/hooks/use-home-forms';
+import { useCrmForms, useDeleteCrmForm } from '@/hooks/use-crm-forms';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,15 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Plus, Pencil, Eye, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function FormsHomeMgtPage() {
+export default function FormsCRMPage() {
   const { selectedRegionId } = useRegionStore();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>('all');
+  const [category, setCategory] = useState<string>('all');
 
-  const { data, isLoading } = useHomeForms(selectedRegionId || undefined, status, search);
+  const { data, isLoading } = useCrmForms(selectedRegionId || undefined, status, category, search);
   const forms = data?.data || [];
 
-  const deleteForm = useDeleteHomeForm();
+  const deleteForm = useDeleteCrmForm();
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this form?')) {
@@ -40,28 +41,47 @@ export default function FormsHomeMgtPage() {
           <p className="text-sm text-[var(--color-text-secondary)]">All your Forms in one place</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/forms-home-mgt/new">
+          <Link href="/forms-crm/new">
             <Button className="bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 gap-2">
               <Plus className="h-4 w-4" />
-              Create Home Forms
+              Create Form CRM
             </Button>
           </Link>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="w-[200px]">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="bg-[var(--color-bg-primary)]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Draft">Draft</SelectItem>
-              <SelectItem value="Published">Published</SelectItem>
-              <SelectItem value="Archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="w-[200px]">
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="bg-[var(--color-bg-primary)]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Risk Management">Risk Management</SelectItem>
+                <SelectItem value="High Care">High Care</SelectItem>
+                <SelectItem value="Medication">Medication</SelectItem>
+                <SelectItem value="Behaviour Support">Behaviour Support</SelectItem>
+                <SelectItem value="Intake / Admission">Intake / Admission</SelectItem>
+                <SelectItem value="General">General</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-[200px]">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="bg-[var(--color-bg-primary)]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Draft">Draft</SelectItem>
+                <SelectItem value="Published">Published</SelectItem>
+                <SelectItem value="Archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="relative w-full sm:w-[300px]">
@@ -124,12 +144,12 @@ export default function FormsHomeMgtPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Link href={`/forms-home-mgt/${form.id}/edit`}>
+                      <Link href={`/forms-crm/${form.id}/edit`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50">
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Link href={`/forms-home-mgt/${form.id}/view`}>
+                      <Link href={`/forms-crm/${form.id}/view`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50">
                           <Eye className="h-4 w-4" />
                         </Button>
