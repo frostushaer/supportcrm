@@ -52,7 +52,7 @@ export const sidebarItems: NavGroup[] = [
       { title: 'Reporting', url: '/reports', icon: BarChart3 },
       { title: 'Forms Management CRM', url: '/forms/crm', icon: ScrollText },
       { title: 'Forms Management HRM', url: '/forms/hrm', icon: ScrollText },
-      { title: 'Forms Home MGT', url: '/forms/home', icon: ScrollText },
+      { title: 'Forms Home MGT', url: '/forms-home-mgt', icon: ScrollText },
       { title: 'Policies', url: '/policies', icon: ScrollText },
       { title: 'Complaints', url: '/complaints', icon: ThumbsDown },
       { title: 'Feedback', url: '/feedback', icon: MessageSquare },

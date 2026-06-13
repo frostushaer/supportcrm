@@ -16,6 +16,9 @@ model Region {
   participants Participant[]
   questions    Question[]
   feedbacks    Feedback[]
+  complaints   Complaint[]
+  policies     Policy[]
+  formTemplates FormTemplate[]
 }
 
 model Participant {
@@ -354,3 +357,107 @@ model Feedback {
   @@index([status])
 }
 
+model Complaint {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  subject     String
+  details     String   @db.Text
+  userRole    String?
+  submittedBy String
+  regionId    String?
+
+  region      Region?  @relation(fields: [regionId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([regionId])
+}
+
+model Policy {
+  id             String   @id @default(cuid())
+  fileName       String
+  category       String
+  fileUrl        String
+  fileType       String?
+  fileSize       Int?
+  uploadedBy     String
+  uploadedByName String?
+  regionId       String?
+
+  region         Region?  @relation(fields: [regionId], references: [id])
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([regionId])
+}
+
+model FormTemplate {
+  id            String   @id @default(cuid())
+  title         String
+  category      String
+  subcategory   String?
+  description   String?  @db.Text
+  status        String   @default("Draft")
+  kind          String   @default("HomeMgt")
+  regionId      String?
+  createdBy     String
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  region        Region?  @relation(fields: [regionId], references: [id])
+  sections      FormSection[]
+
+  @@index([regionId])
+  @@index([status])
+}
+
+model FormSection {
+  id             String         @id @default(cuid())
+  formTemplateId String
+  title          String
+  order          Int            @default(0)
+  
+  formTemplate   FormTemplate   @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  subSections    FormSubSection[]
+  fields         FormField[]
+
+  @@index([formTemplateId])
+}
+
+model FormSubSection {
+  id            String        @id @default(cuid())
+  formSectionId String
+  title         String
+  order         Int           @default(0)
+  addOther      Boolean       @default(false)
+  
+  formSection   FormSection   @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+  fields        FormField[]
+
+  @@index([formSectionId])
+}
+
+model FormField {
+  id                 String          @id @default(cuid())
+  formSectionId      String?
+  formSubSectionId   String?
+  label              String
+  type               String          
+  required           Boolean         @default(false)
+  fullWidth          Boolean         @default(false)
+  addedInSupportPlan Boolean         @default(false)
+  dependentOnFieldId String?
+  hint               String?         @db.Text
+  legalReference     String?         @db.Text
+  order              Int             @default(0)
+
+  formSection        FormSection?    @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+  formSubSection     FormSubSection? @relation(fields: [formSubSectionId], references: [id], onDelete: Cascade)
+  
+  @@index([formSectionId])
+  @@index([formSubSectionId])
+}
