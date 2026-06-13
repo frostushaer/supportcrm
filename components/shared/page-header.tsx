@@ -8,7 +8,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <header className="sticky top-16 z-20 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-4">
+    <header className="sticky top-0 z-20 -mx-4 -mt-4 md:-mx-6 md:-mt-6 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 md:px-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text)]">
