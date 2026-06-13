@@ -9,7 +9,7 @@ interface ReportLayoutProps {
 
 export function ReportLayout({ title, filters, children }: ReportLayoutProps) {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title={title}
       />

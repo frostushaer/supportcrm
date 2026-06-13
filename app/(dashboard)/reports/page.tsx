@@ -21,7 +21,7 @@ export default function ReportingDashboardPage() {
   const { selectedRegionId, setSelectedRegionId } = useRegionStore();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Reporting Dashboard"
         action={
