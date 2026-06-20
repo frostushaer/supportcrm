@@ -13,19 +13,35 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const regionId = searchParams.get("regionId");
+    const status = searchParams.get("status");
+    const search = searchParams.get("search");
 
-    if (!regionId) {
-      return new NextResponse("Region ID is required", { status: 400 });
+    const where: Prisma.WorkerWhereInput = {};
+    
+    if (regionId && regionId !== "all") {
+      where.regionId = regionId;
     }
-
-    const where: Prisma.WorkerWhereInput = {
-      regionId,
-    };
+    
+    if (status && status !== "All") {
+      where.status = status;
+    }
+    
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { role: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const workers = await db.worker.findMany({
       where,
       orderBy: {
         firstName: 'asc'
+      },
+      include: {
+        region: true,
       }
     });
 

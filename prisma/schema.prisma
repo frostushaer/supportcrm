@@ -7,23 +7,25 @@ datasource db {
 }
 
 model Region {
-  id           String        @id @default(cuid())
-  name         String        @unique
-  state        String
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  participants Participant[]
-  questions    Question[]
-  feedbacks    Feedback[]
-  complaints   Complaint[]
-  policies     Policy[]
+  id            String              @id @default(cuid())
+  name          String              @unique
+  state         String
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  participants  Participant[]
+  questions     Question[]
+  feedbacks     Feedback[]
+  complaints    Complaint[]
+  policies      Policy[]
   formTemplates FormTemplate[]
-  workers      Worker[]
-  homes        HomeProperty[]
-  incidents    Incident[]
-  shifts       Shift[]
-  invoices     Invoice[]
+  workers       Worker[]
+  homes         HomeProperty[]
+  incidents     Incident[]
+  shifts        Shift[]
+  invoices      Invoice[]
+  applicants    Applicant[]
+  portalUsers   PrimaryPortalUser[] @relation("PortalUserRegions")
 }
 
 model Participant {
@@ -82,6 +84,7 @@ model Participant {
   shifts                     Shift[]
   incidents                  Incident[]
   invoices                   Invoice[]
+  assignedWorkers            Worker[]            @relation("WorkerAssignedParticipants")
 }
 
 model NDISPlan {
@@ -328,38 +331,38 @@ model FundingAllocation {
 }
 
 model Question {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   subject     String
   category    String
-  details     String   @db.Text
+  details     String  @db.Text
   userRole    String?
   submittedBy String
   regionId    String?
 
-  region      Region?  @relation(fields: [regionId], references: [id])
+  region Region? @relation(fields: [regionId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Feedback {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   name           String
   subject        String
   category       String
-  details        String   @db.Text
+  details        String  @db.Text
   attachmentUrl  String?
   attachmentName String?
-  status         String   @default("New")
+  status         String  @default("New")
   userRole       String?
   submittedBy    String
   regionId       String?
 
-  region         Region?  @relation(fields: [regionId], references: [id])
+  region Region? @relation(fields: [regionId], references: [id])
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([regionId])
   @@index([status])
@@ -375,16 +378,16 @@ model Complaint {
   submittedBy String
   regionId    String?
 
-  region      Region?  @relation(fields: [regionId], references: [id])
+  region Region? @relation(fields: [regionId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([regionId])
 }
 
 model Policy {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   fileName       String
   category       String
   fileUrl        String
@@ -394,10 +397,10 @@ model Policy {
   uploadedByName String?
   regionId       String?
 
-  region         Region?  @relation(fields: [regionId], references: [id])
+  region Region? @relation(fields: [regionId], references: [id])
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([regionId])
 }
@@ -416,223 +419,362 @@ model FormTemplate {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  region        Region?  @relation(fields: [regionId], references: [id])
-  sections      FormSection[]
+  region   Region?       @relation(fields: [regionId], references: [id])
+  sections FormSection[]
 
   @@index([regionId])
   @@index([status])
 }
 
 model FormSection {
-  id             String         @id @default(cuid())
+  id             String @id @default(cuid())
   formTemplateId String
   title          String
-  order          Int            @default(0)
-  
-  formTemplate   FormTemplate   @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
-  subSections    FormSubSection[]
-  fields         FormField[]
+  order          Int    @default(0)
+
+  formTemplate FormTemplate     @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  subSections  FormSubSection[]
+  fields       FormField[]
 
   @@index([formTemplateId])
 }
 
 model FormSubSection {
-  id            String        @id @default(cuid())
+  id            String  @id @default(cuid())
   formSectionId String
   title         String
-  order         Int           @default(0)
-  addOther      Boolean       @default(false)
-  
-  formSection   FormSection   @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
-  fields        FormField[]
+  order         Int     @default(0)
+  addOther      Boolean @default(false)
+
+  formSection FormSection @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+  fields      FormField[]
 
   @@index([formSectionId])
 }
 
 model FormField {
-  id                 String          @id @default(cuid())
+  id                 String  @id @default(cuid())
   formSectionId      String?
   formSubSectionId   String?
   label              String
-  type               String          
-  required           Boolean         @default(false)
-  fullWidth          Boolean         @default(false)
-  addedInSupportPlan Boolean         @default(false)
+  type               String
+  required           Boolean @default(false)
+  fullWidth          Boolean @default(false)
+  addedInSupportPlan Boolean @default(false)
   dependentOnFieldId String?
-  hint               String?         @db.Text
-  legalReference     String?         @db.Text
-  order              Int             @default(0)
+  hint               String? @db.Text
+  legalReference     String? @db.Text
+  order              Int     @default(0)
 
-  formSection        FormSection?    @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
-  formSubSection     FormSubSection? @relation(fields: [formSubSectionId], references: [id], onDelete: Cascade)
-  
+  formSection    FormSection?    @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+  formSubSection FormSubSection? @relation(fields: [formSubSectionId], references: [id], onDelete: Cascade)
+
   @@index([formSectionId])
   @@index([formSubSectionId])
 }
 
 // Staff/Support Worker
 model Worker {
-  id                  String   @id @default(cuid())
-  firstName           String
-  lastName            String
-  email               String   @unique
-  phoneNumber         String
-  role                String   // Support Worker, Allied Health, Support Coordinator
-  status              String   // Active, Inactive, On Leave
-  policeCheckExpiry   DateTime?
-  wwccExpiry          DateTime?
-  regionId            String
+  id                String    @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String    @unique
+  phoneNumber       String
+  role              String // Support Worker, Allied Health, Support Coordinator
+  status            String // Active, Inactive, On Leave
+  policeCheckExpiry DateTime?
+  wwccExpiry        DateTime?
+  regionId          String
 
-  region              Region   @relation(fields: [regionId], references: [id])
-  shifts              Shift[]
-  incidentsReported   Incident[] @relation("ReportedIncidents")
-  incidentsInvolved   Incident[] @relation("InvolvedWorkerIncidents")
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  // New HRM fields
+  employmentType            String? // Casual, PartTime, FullTime
+  jobTitle                  String?
+  salarySlab                String?
+  hourlyRate                Float?
+  joiningDate               DateTime?
+  performanceReviewRequired Boolean   @default(false)
+  profilePictureUrl         String?
+  maxAllowedHours           Float?
+  xeroEmployeeId            String?
+  quickBooksEmployeeId      String?
+  myobEmployeeId            String?
+  traits                    Json?
+
+  region            Region     @relation(fields: [regionId], references: [id])
+  shifts            Shift[]
+  incidentsReported Incident[] @relation("ReportedIncidents")
+  incidentsInvolved Incident[] @relation("InvolvedWorkerIncidents")
+
+  assignedParticipants Participant[]          @relation("WorkerAssignedParticipants")
+  leaves               WorkerLeave[]
+  availabilities       WorkerAvailability[]
+  documentFolders      WorkerDocumentFolder[]
+  documents            WorkerDocument[]
+  trainingRecords      WorkerTrainingRecord[]
+  portalUsers          PrimaryPortalUser[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Applicants
+model Applicant {
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String
+  phoneNumber    String
+  suburb         String?
+  appliedOn      DateTime @default(now())
+  jobTitle       String
+  regionId       String?
+  status         String   @default("Applied") // Applied, PhoneScreening, Interview, Pending, Offer, Hired, Rejected
+  resumeUrl      String?
+  notes          String?  @db.Text
+  interviewNotes String?  @db.Text
+
+  region Region? @relation(fields: [regionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Worker Leave
+model WorkerLeave {
+  id              String   @id @default(cuid())
+  workerId        String
+  updatedByUserId String?
+  leaveType       String
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?  @db.Text
+  comments        String?  @db.Text
+  status          String   @default("Requested") // Requested, Approved, Rejected
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Worker Availability
+model WorkerAvailability {
+  id           String @id @default(cuid())
+  workerId     String
+  dayOfWeek    String // Mon, Tue, Wed, etc.
+  availability String // e.g., "9am - 5pm" or JSON array
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Worker Document Folders
+model WorkerDocumentFolder {
+  id       String @id @default(cuid())
+  workerId String
+  name     String
+
+  worker    Worker           @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  documents WorkerDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Worker Documents
+model WorkerDocument {
+  id       String  @id @default(cuid())
+  workerId String
+  folderId String?
+  fileName String
+  fileUrl  String
+  fileSize Int     @default(0)
+
+  worker Worker                @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  folder WorkerDocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  uploadedAt DateTime @default(now())
+}
+
+// HRM: Worker Training Records
+model WorkerTrainingRecord {
+  id                  String    @id @default(cuid())
+  workerId            String
+  formTemplateId      String?
+  formName            String
+  status              String    @default("Assigned") // Assigned, Submitted, Completed, Expired
+  createdByUserId     String
+  submittedAt         DateTime?
+  lastUpdatedByUserId String?
+  lastUpdatedAt       DateTime?
+  expiryDate          DateTime?
+  version             String?
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// HRM: Primary Portal Users
+model PrimaryPortalUser {
+  id       String @id @default(cuid())
+  workerId String
+  email    String @unique
+  status   String @default("Active") // Active, Inactive
+  role     String @default("SupportWorker") // Admin, Manager, SupportWorker
+
+  worker  Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  regions Region[] @relation("PortalUserRegions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // SIL/SDA Property
 model HomeProperty {
-  id                  String   @id @default(cuid())
-  regionId            String
-  streetAddress       String
-  suburb              String
-  state               String
-  postalCode          String
-  propertyType        String
-  sdaType             String?  // Specialist Disability Accommodation
-  totalRooms          Int
-  totalBathrooms      Int
-  totalKitchens       Int
-  totalParkingSpaces  Int
-  totalSharedSpaces   Int
-  hasFrontYard        Boolean  @default(false)
-  hasBackyard         Boolean  @default(false)
-  hasSwimmingPool     Boolean  @default(false)
-  vacancyStatus       String   // Available, Full, Partial
-  status              String   // Active, Inactive
+  id                 String  @id @default(cuid())
+  regionId           String
+  streetAddress      String
+  suburb             String
+  state              String
+  postalCode         String
+  propertyType       String
+  sdaType            String? // Specialist Disability Accommodation
+  totalRooms         Int
+  totalBathrooms     Int
+  totalKitchens      Int
+  totalParkingSpaces Int
+  totalSharedSpaces  Int
+  hasFrontYard       Boolean @default(false)
+  hasBackyard        Boolean @default(false)
+  hasSwimmingPool    Boolean @default(false)
+  vacancyStatus      String // Available, Full, Partial
+  status             String // Active, Inactive
 
-  region              Region   @relation(fields: [regionId], references: [id])
+  region Region @relation(fields: [regionId], references: [id])
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Incident reporting
 model Incident {
-  id                                String   @id @default(cuid())
-  incidentNumber                    String   @unique
-  status                            String   @default("Draft") // Draft, Submitted, UnderInvestigation, ClosedReported, ClosedUnreported
-  outcomeType                       String?  // Hazard, Incident, NearMiss, Medication
-  regionId                          String
-  reportedById                      String
-  reportedByName                    String?
-  reportedAt                        DateTime?
+  id             String    @id @default(cuid())
+  incidentNumber String    @unique
+  status         String    @default("Draft") // Draft, Submitted, UnderInvestigation, ClosedReported, ClosedUnreported
+  outcomeType    String? // Hazard, Incident, NearMiss, Medication
+  regionId       String
+  reportedById   String
+  reportedByName String?
+  reportedAt     DateTime?
 
-  dateOfIncident                    DateTime?
-  timeOfIncident                    String?
-  address                           String?
-  location                          String?
-  locationDetails                   String?  @db.Text
+  dateOfIncident  DateTime?
+  timeOfIncident  String?
+  address         String?
+  location        String?
+  locationDetails String?   @db.Text
 
   // People involved
-  participants                      Participant[]
-  workerId                          String?
-  visitorName                       String?
-  volunteerName                     String?
-  otherPersonName                   String?
-  responsiblePersonNotified         Boolean  @default(false)
+  participants              Participant[]
+  workerId                  String?
+  visitorName               String?
+  volunteerName             String?
+  otherPersonName           String?
+  responsiblePersonNotified Boolean       @default(false)
 
   // Response summary flags
-  firstAidGiven                     Boolean  @default(false)
-  ambulanceRequired                 Boolean  @default(false)
-  policeInvolved                    Boolean  @default(false)
-  injuries                          Boolean  @default(false)
-  prnGiven                          Boolean  @default(false)
-  medicalReview                     Boolean  @default(false)
+  firstAidGiven     Boolean @default(false)
+  ambulanceRequired Boolean @default(false)
+  policeInvolved    Boolean @default(false)
+  injuries          Boolean @default(false)
+  prnGiven          Boolean @default(false)
+  medicalReview     Boolean @default(false)
 
   // Categorisation
-  incidentCategories                String[]
+  incidentCategories String[]
 
   // Narrative / Context
-  summary                           String?  @db.Text
-  behaviourPlanExists               Boolean  @default(false)
-  regulatedRestrictivePracticesUsed Boolean  @default(false)
-  taskAtTime                        String?  @db.Text
-  incidentEnd                       String?  @db.Text
-  whatHappened                      String?  @db.Text
-  circumstancesLeadingUp            String?  @db.Text
-  immediateAction                   String?  @db.Text
+  summary                           String? @db.Text
+  behaviourPlanExists               Boolean @default(false)
+  regulatedRestrictivePracticesUsed Boolean @default(false)
+  taskAtTime                        String? @db.Text
+  incidentEnd                       String? @db.Text
+  whatHappened                      String? @db.Text
+  circumstancesLeadingUp            String? @db.Text
+  immediateAction                   String? @db.Text
 
   // Additional compliance
-  injuriesToParticipant             Boolean  @default(false)
-  responsiblePersonNotifiedQuestion Boolean  @default(false)
-  firstAidQuestion                  Boolean  @default(false)
-  ambulanceQuestion                 Boolean  @default(false)
-  policeQuestion                    Boolean  @default(false)
-  prnQuestion                       Boolean  @default(false)
-  medicalReviewQuestion             Boolean  @default(false)
+  injuriesToParticipant             Boolean @default(false)
+  responsiblePersonNotifiedQuestion Boolean @default(false)
+  firstAidQuestion                  Boolean @default(false)
+  ambulanceQuestion                 Boolean @default(false)
+  policeQuestion                    Boolean @default(false)
+  prnQuestion                       Boolean @default(false)
+  medicalReviewQuestion             Boolean @default(false)
 
   // Sign-off
-  signatoryName                     String?
-  signatureData                     String?  @db.Text
+  signatoryName String?
+  signatureData String? @db.Text
 
-  createdAt                         DateTime @default(now())
-  updatedAt                         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  region                            Region   @relation(fields: [regionId], references: [id])
-  reportedBy                        Worker   @relation("ReportedIncidents", fields: [reportedById], references: [id])
-  workerInvolved                    Worker?  @relation("InvolvedWorkerIncidents", fields: [workerId], references: [id])
-  
-  witnesses                         IncidentWitness[]
-  attachments                       IncidentAttachment[]
-  investigation                     IncidentInvestigation?
-  review                            IncidentReview?
+  region         Region  @relation(fields: [regionId], references: [id])
+  reportedBy     Worker  @relation("ReportedIncidents", fields: [reportedById], references: [id])
+  workerInvolved Worker? @relation("InvolvedWorkerIncidents", fields: [workerId], references: [id])
+
+  witnesses     IncidentWitness[]
+  attachments   IncidentAttachment[]
+  investigation IncidentInvestigation?
+  review        IncidentReview?
 
   @@index([regionId])
 }
 
 model IncidentWitness {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   incidentId  String
   firstName   String
   lastName    String
   dateOfBirth DateTime?
   gender      String?
-  address     String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  address     String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
 }
 
 model IncidentAttachment {
-  id          String   @id @default(cuid())
-  incidentId  String
-  fileName    String
-  fileUrl     String
-  fileSize    Int
-  uploadedAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  incidentId String
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  uploadedAt DateTime @default(now())
 
-  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
 }
 
 model IncidentInvestigation {
-  id                              String   @id @default(cuid())
-  incidentId                      String   @unique
-  status                          String   @default("NotStarted") // NotStarted, InProgress, Completed
-  isReportable                    Boolean?
-  reportableDeterminedAt          DateTime?
+  id                     String    @id @default(cuid())
+  incidentId             String    @unique
+  status                 String    @default("NotStarted") // NotStarted, InProgress, Completed
+  isReportable           Boolean?
+  reportableDeterminedAt DateTime?
 
-  participantNotes                Json?    // Array of notes
-  staffNotes                      Json?    // Array of notes
+  participantNotes Json? // Array of notes
+  staffNotes       Json? // Array of notes
 
-  advocacyOffered                 Boolean?
-  advocacyDetails                 String?  @db.Text
+  advocacyOffered Boolean?
+  advocacyDetails String?  @db.Text
 
   // Investigation checks (Yes/No/NA)
   siteVisitConducted              String?
@@ -653,20 +795,20 @@ model IncidentInvestigation {
   poorHousekeepingContributed     String?
   workEnvironmentContributed      String?
 
-  rootCauseAnalysis               String?  @db.Text
-  remedialActions                 Json?    // Array of strings
+  rootCauseAnalysis String? @db.Text
+  remedialActions   Json? // Array of strings
 
-  createdAt                       DateTime @default(now())
-  updatedAt                       DateTime @updatedAt
-  completedAt                     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
-  incident                        Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 }
 
 model IncidentReview {
-  id                     String   @id @default(cuid())
-  incidentId             String   @unique
-  investigationSummary   String?  @db.Text
+  id                     String    @id @default(cuid())
+  incidentId             String    @unique
+  investigationSummary   String?   @db.Text
   reportable             Boolean?
   investigationStartedAt DateTime?
   reportableOutcome      String?
@@ -677,70 +819,70 @@ model IncidentReview {
   riskRecurrenceRating   String? // Nil/Low/Medium/High
 
   // Further action
-  furtherActionNeeded    String? // Yes/No/NA
-  furtherActionDetails   String? @db.Text
+  furtherActionNeeded  String? // Yes/No/NA
+  furtherActionDetails String? @db.Text
 
   // Manager review
-  finalStatus            String? // ReportedToCommission, ClosedWithoutReporting
-  closedAt               DateTime?
-  
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  finalStatus String? // ReportedToCommission, ClosedWithoutReporting
+  closedAt    DateTime?
 
-  incident               Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 }
 
 // Rostering & Shifts
 model Shift {
-  id              String      @id @default(cuid())
-  participantId   String
-  workerId        String
-  supportItem     String      // NDIS support item code
-  startDateTime   DateTime
-  endDateTime     DateTime
-  status          String      // Scheduled, Completed, Cancelled
-  regionId        String
-  overtime        String?
+  id            String   @id @default(cuid())
+  participantId String
+  workerId      String
+  supportItem   String // NDIS support item code
+  startDateTime DateTime
+  endDateTime   DateTime
+  status        String // Scheduled, Completed, Cancelled
+  regionId      String
+  overtime      String?
 
-  participant     Participant @relation(fields: [participantId], references: [id])
-  worker          Worker      @relation(fields: [workerId], references: [id])
-  region          Region      @relation(fields: [regionId], references: [id])
-  timesheet       Timesheet?
+  participant Participant @relation(fields: [participantId], references: [id])
+  worker      Worker      @relation(fields: [workerId], references: [id])
+  region      Region      @relation(fields: [regionId], references: [id])
+  timesheet   Timesheet?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Timesheet for invoicing
 model Timesheet {
-  id              String   @id @default(cuid())
-  shiftId         String   @unique
+  id              String    @id @default(cuid())
+  shiftId         String    @unique
   actualStartTime DateTime
   actualEndTime   DateTime
-  breakMinutes    Int      @default(0)
+  breakMinutes    Int       @default(0)
   totalHours      Float
   approvedBy      String?
   approvedAt      DateTime?
-  status          String   // Pending, Approved, Rejected
+  status          String // Pending, Approved, Rejected
   shiftNotes      String?
-  incidents       Int      @default(0)
-  kms             Float    @default(0)
-  associatedCost  Float    @default(0)
-  
+  incidents       Int       @default(0)
+  kms             Float     @default(0)
+  associatedCost  Float     @default(0)
+
   // Billing / Invoicing fields
   supportItemCode String?
   quantity        Float?
   unitPrice       Float?
   totalAmount     Float?
   fundingSource   String?
-  billingStatus   String   @default("NotReady") // NotReady, Allocated, Invoiced
+  billingStatus   String  @default("NotReady") // NotReady, Allocated, Invoiced
   invoiceId       String?
 
-  shift           Shift    @relation(fields: [shiftId], references: [id])
-  invoice         Invoice? @relation(fields: [invoiceId], references: [id])
+  shift   Shift    @relation(fields: [shiftId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Invoices generated from Timesheets
@@ -761,13 +903,13 @@ model Invoice {
   notes                String?  @db.Text
   externalReference    String?
 
-  participant          Participant @relation(fields: [participantId], references: [id])
-  region               Region?     @relation(fields: [regionId], references: [id])
-  invoiceLines         InvoiceLine[]
-  timesheets           Timesheet[]
+  participant  Participant   @relation(fields: [participantId], references: [id])
+  region       Region?       @relation(fields: [regionId], references: [id])
+  invoiceLines InvoiceLine[]
+  timesheets   Timesheet[]
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([regionId])
   @@index([participantId])
@@ -775,27 +917,26 @@ model Invoice {
 
 // Line items for an Invoice
 model InvoiceLine {
-  id               String   @id @default(cuid())
-  invoiceId        String
-  timesheetId      String?
-  workerId         String?
-  workerName       String?
-  participantId    String?
-  participantName  String?
-  deliveredDate    DateTime
-  typeOfService    String?
-  supportItemCode  String?
-  quantity         Float
-  unitPrice        Float
-  totalAmount      Float
-  fundingSource    String?
-  notes            String?  @db.Text
+  id              String   @id @default(cuid())
+  invoiceId       String
+  timesheetId     String?
+  workerId        String?
+  workerName      String?
+  participantId   String?
+  participantName String?
+  deliveredDate   DateTime
+  typeOfService   String?
+  supportItemCode String?
+  quantity        Float
+  unitPrice       Float
+  totalAmount     Float
+  fundingSource   String?
+  notes           String?  @db.Text
 
-  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([invoiceId])
 }
-

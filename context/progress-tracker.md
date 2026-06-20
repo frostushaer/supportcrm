@@ -10,7 +10,21 @@
 
 ## Current Goal
 
-**Forms HRM Module (spec-15) — COMPLETE**
+**HRM Module (spec-20) — COMPLETE**
+
+---
+
+### ✅ HRM Module — Full Feature Spec (spec-20)
+
+- [x] Step 1: Extended Prisma schema with Applicant, WorkerLeave, WorkerAvailability, WorkerDocumentFolder, WorkerDocument, WorkerTrainingRecord, PrimaryPortalUser.
+- [x] Step 2: Database migration synced and `prisma generate` run.
+- [x] Step 3: Created Zod validation schemas in `lib/validations/hrm.ts`.
+- [x] Step 4: Built API routes for `/api/hrm/*` and extended `/api/workers`.
+- [x] Step 5: Created TanStack Query hooks in `hooks/use-hrm.ts`.
+- [x] Step 6: Built `/hrm` dashboard page.
+- [x] Step 7: Built `/hrm/applicants` and `/hrm/team-management` list pages.
+- [x] Step 8: Built profile pages for applicants, assessments, and workers.
+- [x] Step 9: `pnpm build` passes clean.
 
 ---
 
