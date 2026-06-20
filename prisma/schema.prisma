@@ -7,29 +7,34 @@ datasource db {
 }
 
 model Region {
-  id            String              @id @default(cuid())
-  name          String              @unique
-  state         String
-  isActive      Boolean             @default(true)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  participants  Participant[]
-  questions     Question[]
-  feedbacks     Feedback[]
-  complaints    Complaint[]
-  policies      Policy[]
-  formTemplates FormTemplate[]
-  workers       Worker[]
-  homes         HomeProperty[]
-  incidents     Incident[]
-  shifts        Shift[]
-  invoices      Invoice[]
-  applicants    Applicant[]
-  portalUsers   PrimaryPortalUser[] @relation("PortalUserRegions")
+  id                       String                    @id @default(cuid())
+  name                     String                    @unique
+  state                    String
+  isActive                 Boolean                   @default(true)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  participants             Participant[]
+  questions                Question[]
+  feedbacks                Feedback[]
+  complaints               Complaint[]
+  policies                 Policy[]
+  formTemplates            FormTemplate[]
+  workers                  Worker[]
+  homes                    HomeProperty[]
+  incidents                Incident[]
+  shifts                   Shift[]
+  invoices                 Invoice[]
+  applicants               Applicant[]
+  portalUsers              PrimaryPortalUser[]       @relation("PortalUserRegions")
+  cosParticipantProfiles   CosParticipantProfile[]
+  externalServiceProviders ExternalServiceProvider[] @relation("ServiceProviderRegions")
+  cosCaseNotes             CosCaseNote[]
+  ndisClaims               NdisClaim[]
+  cosInvoices              CosInvoice[]
 }
 
 model Participant {
-  id                         String              @id @default(cuid())
+  id                         String                 @id @default(cuid())
   firstName                  String
   lastName                   String
   gender                     String
@@ -47,12 +52,12 @@ model Participant {
   postcode                   String
   emergencyContactName       String?
   emergencyContactNumber     String?
-  ndisNumber                 String              @unique
+  ndisNumber                 String                 @unique
   planNominee                String?
   serviceStartDate           DateTime?
   serviceEndDate             DateTime?
   serviceSupport             String
-  auditParticipation         Boolean             @default(false)
+  auditParticipation         Boolean                @default(false)
   participantConditions      String?
   importantAlert             String?
   shiftInstructions          String?
@@ -60,12 +65,12 @@ model Participant {
   externalCoordinatorEmail   String?
   externalCoordinatorPhone   String?
   externalCoordinatorCompany String?
-  status                     String              @default("Active")
+  status                     String                 @default("Active")
   timezone                   String?
   planManagedBy              String?
   regionId                   String
-  createdAt                  DateTime            @default(now())
-  updatedAt                  DateTime            @updatedAt
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
   appointments               Appointment[]
   caseNotes                  CaseNote[]
   dislikes                   Dislike[]
@@ -77,14 +82,19 @@ model Participant {
   likes                      Like[]
   medications                Medication[]
   ndisPlans                  NDISPlan[]
-  region                     Region              @relation(fields: [regionId], references: [id])
+  region                     Region                 @relation(fields: [regionId], references: [id])
   riskAssessments            RiskAssessment[]
   shiftNotes                 ShiftNote[]
   tasks                      Task[]
   shifts                     Shift[]
   incidents                  Incident[]
   invoices                   Invoice[]
-  assignedWorkers            Worker[]            @relation("WorkerAssignedParticipants")
+  assignedWorkers            Worker[]               @relation("WorkerAssignedParticipants")
+  cosProfile                 CosParticipantProfile?
+  cosFundings                CosFunding[]
+  cosCaseNotes               CosCaseNote[]
+  ndisClaims                 NdisClaim[]
+  cosInvoices                CosInvoice[]
 }
 
 model NDISPlan {
@@ -512,6 +522,8 @@ model Worker {
   documents            WorkerDocument[]
   trainingRecords      WorkerTrainingRecord[]
   portalUsers          PrimaryPortalUser[]
+  cosFundings          CosFunding[]
+  cosCaseNotes         CosCaseNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -939,4 +951,147 @@ model InvoiceLine {
   updatedAt DateTime @updatedAt
 
   @@index([invoiceId])
+}
+
+// Support Coordination (COS)
+
+enum ProgramType {
+  COS
+  AlliedHealth
+}
+
+model CosParticipantProfile {
+  id              String    @id @default(cuid())
+  participantId   String    @unique
+  program         ProgramType @default(COS)
+  managementStyle String
+  serviceRegionId String
+  ndisNumber      String    @unique
+  planStartDate   DateTime?
+  planEndDate     DateTime?
+  quickSnapshot   String?
+
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  serviceRegion Region      @relation(fields: [serviceRegionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CosFunding {
+  id                     String   @id @default(cuid())
+  participantId          String
+  program                ProgramType @default(COS)
+  cosCoordinatorWorkerId String?
+  serviceName            String
+  serviceTotalBudget     Float
+  fundingStartDate       DateTime
+  fundingEndDate         DateTime
+  totalFunding           Float
+  fundingRemaining       Float
+  fundingDelivered       Float
+  notes                  String?  @db.Text
+
+  participant Participant   @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  coordinator Worker?       @relation(fields: [cosCoordinatorWorkerId], references: [id], onDelete: SetNull)
+  caseNotes   CosCaseNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CosSupportCatalogueItem {
+  id                  String  @id @default(cuid())
+  supportItemNumber   String
+  program             ProgramType @default(COS)
+  supportItemName     String
+  supportCategoryName String
+  priceCatalogueLabel String
+  price               Float
+  isActive            Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ExternalServiceProvider {
+  id                 String  @id @default(cuid())
+  name               String
+  program            ProgramType @default(COS)
+  contactInformation String? @db.Text
+  billingContact     String?
+
+  regions Region[] @relation("ServiceProviderRegions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CosCaseNote {
+  id                   String   @id @default(cuid())
+  participantId        String
+  program              ProgramType @default(COS)
+  fundingId            String?
+  serviceRegionId      String
+  supportCoordinatorId String
+  deliveredDate        DateTime
+  durationMinutes      Int
+  kilometres           Float?
+  amount               Float
+  noteContactType      String
+  caseNoteText         String   @db.Text
+  status               String   @default("Draft") // Draft, ReadyForClaim, Claimed, Invoiced
+  createdByUserId      String
+
+  participant        Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  funding            CosFunding? @relation(fields: [fundingId], references: [id], onDelete: SetNull)
+  serviceRegion      Region      @relation(fields: [serviceRegionId], references: [id])
+  supportCoordinator Worker      @relation(fields: [supportCoordinatorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NdisClaim {
+  id               String   @id @default(cuid())
+  reference        String   @unique
+  program          ProgramType @default(COS)
+  participantId    String
+  regionId         String
+  claimType        String
+  deliveredFrom    DateTime
+  deliveredTo      DateTime
+  totalAmount      Float
+  status           String   @default("Draft") // Draft, Submitted, Paid, Rejected
+  caseNotesSummary String?  @db.Text
+  caseNoteIds      String[] // Array of case note IDs linked
+  createdByUserId  String
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  region      Region      @relation(fields: [regionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CosInvoice {
+  id                   String   @id @default(cuid())
+  reference            String   @unique
+  program              ProgramType @default(COS)
+  invoiceType          String
+  participantId        String
+  regionId             String
+  serviceDeliveredFrom DateTime
+  serviceDeliveredTo   DateTime
+  numDeliveredServices Int
+  totalValue           Float
+  status               String   @default("Draft") // Draft, Sent, Paid, Cancelled
+  caseNoteIds          String[] // Array of case note IDs linked
+  createdByUserId      String
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  region      Region      @relation(fields: [regionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

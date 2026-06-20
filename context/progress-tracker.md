@@ -283,13 +283,15 @@
 **Goal:** Complete all remaining modules.
 
 **Modules:**
-1. Incident Management (form + workflow board)
-2. Invoicing pipeline (timesheet → invoice → export)
-3. Home Management (property registry)
-4. Forms Management (dynamic builder)
-5. Reporting dashboards
-6. Policies, Complaints, Feedback, Ask a Question
-7. Settings (RBAC, Branding, Regions)
+1. [x] Incident Management (form + workflow board)
+2. [x] Invoicing Module (timesheet → invoice → export)
+3. [x] Support Coordination
+4. [x] Allied Health
+5. [x] Home Management (property registry)
+6. [x] Forms Management (dynamic builder)
+7. [x] Reporting dashboards
+8. [x] Policies, Complaints, Feedback, Ask a Question
+9. [x] Settings (RBAC, Branding, Regions)
 
 ---
 

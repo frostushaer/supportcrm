@@ -1,3 +1,4 @@
+/* eslint-disable */
 const fs = require('fs');
 const glob = require('child_process').execSync('find app/api/hrm app/api/workers -name route.ts').toString().trim().split('\n');
 
