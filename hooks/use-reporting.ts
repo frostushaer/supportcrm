@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRegionStore } from "@/store/region-store";
 
-export function useRocReport(filters: any) {
+export function useRocReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
@@ -21,7 +21,7 @@ export function useRocReport(filters: any) {
   });
 }
 
-export function useRocWeeklyReport(filters: any) {
+export function useRocWeeklyReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
@@ -41,7 +41,7 @@ export function useRocWeeklyReport(filters: any) {
   });
 }
 
-export function useTimesheetReport(filters: any) {
+export function useTimesheetReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
@@ -61,7 +61,7 @@ export function useTimesheetReport(filters: any) {
   });
 }
 
-export function usePayrollReport(filters: any) {
+export function usePayrollReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
@@ -81,7 +81,7 @@ export function usePayrollReport(filters: any) {
   });
 }
 
-export function useFeedbackReport(filters: any) {
+export function useFeedbackReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
@@ -101,7 +101,7 @@ export function useFeedbackReport(filters: any) {
   });
 }
 
-export function useComplaintsReport(filters: any) {
+export function useComplaintsReport(filters: Record<string, unknown>) {
   const { selectedRegionId } = useRegionStore();
   const regionId = selectedRegionId;
 
