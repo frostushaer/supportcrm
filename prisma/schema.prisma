@@ -847,22 +847,60 @@ model IncidentReview {
 // Rostering & Shifts
 model Shift {
   id            String   @id @default(cuid())
-  participantId String
   workerId      String
-  supportItem   String // NDIS support item code
+  participantId String?  // Optional for open shifts
+  regionId      String
+  shiftDate     DateTime // Added
   startDateTime DateTime
   endDateTime   DateTime
-  status        String // Scheduled, Completed, Cancelled
-  regionId      String
+  serviceCategory String? // Added (replaces supportItem but keeping both to avoid breakage if needed, or just rename)
+  supportItem   String?   // NDIS support item code
+  ratioWorkerCount      Int @default(1)
+  ratioParticipantCount Int @default(1)
+  tasks         Json?     // Array of short tasks/notes
+  status        String    @default("Unpublished") // Unpublished, Published, Rejected, Open
   overtime      String?
 
-  participant Participant @relation(fields: [participantId], references: [id])
-  worker      Worker      @relation(fields: [workerId], references: [id])
-  region      Region      @relation(fields: [regionId], references: [id])
+  // Quick Settings flags
+  workerTrackingEnabled       Boolean @default(false)
+  isGroupShift                Boolean @default(false)
+  isOpenShift                 Boolean @default(false)
+  requireParticipantSignature Boolean @default(false)
+  enforceDistanceRestriction  Boolean @default(false)
+  allowShiftOverlapping       Boolean @default(false)
+  isSleepoverShift            Boolean @default(false)
+
+  // Recurrence
+  recurring            Boolean   @default(false)
+  recurrencePattern    String?
+  recurrenceEndDate    DateTime?
+  recurrenceDaysOfWeek Json?
+
+  // Audit
+  createdByUserId String?
+  updatedByUserId String?
+
+  participant Participant? @relation(fields: [participantId], references: [id])
+  worker      Worker       @relation(fields: [workerId], references: [id])
+  region      Region       @relation(fields: [regionId], references: [id])
   timesheet   Timesheet?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ShiftTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  workerId        String?
+  serviceCategory String?
+  defaultStartTime String? // "HH:mm"
+  defaultEndTime   String? // "HH:mm"
+  defaultSettings  Json?   // JSON object of quick settings
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Timesheet for invoicing

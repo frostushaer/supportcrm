@@ -28,6 +28,7 @@ export async function POST(request: Request) {
 
     for (const ts of timesheets) {
       const pId = ts.shift.participantId;
+      if (!pId) continue; // Skip if no participant
       if (!participantGroups[pId]) {
         participantGroups[pId] = [];
       }
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
       const serviceDeliveredFrom = new Date(Math.min(...dates));
       const serviceDeliveredTo = new Date(Math.max(...dates));
 
-      const invoiceNumber = `INV-${Date.now().toString().slice(-6)}-${participant.firstName.slice(0, 2).toUpperCase()}`;
+      const invoiceNumber = `INV-${Date.now().toString().slice(-6)}-${participant?.firstName?.slice(0, 2).toUpperCase() || 'UNK'}`;
 
       // In a transaction, create Invoice, InvoiceLines, and update Timesheets
       const result = await prisma.$transaction(async (tx) => {
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
           data: {
             invoiceNumber,
             participantId,
-            participantName: `${participant.firstName} ${participant.lastName}`,
+            participantName: `${participant?.firstName || ''} ${participant?.lastName || ''}`.trim() || 'Unknown',
             createdById,
             createdByName,
             serviceDeliveredFrom,
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
               workerId: ts.shift.workerId,
               workerName: `${ts.shift.worker.firstName} ${ts.shift.worker.lastName}`,
               participantId,
-              participantName: `${participant.firstName} ${participant.lastName}`,
+              participantName: `${participant?.firstName || ''} ${participant?.lastName || ''}`.trim() || 'Unknown',
               deliveredDate: ts.shift.startDateTime,
               typeOfService: ts.shift.supportItem,
               supportItemCode: ts.supportItemCode,
