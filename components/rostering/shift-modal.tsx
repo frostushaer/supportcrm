@@ -130,9 +130,9 @@ export function ShiftModal({ open, onOpenChange, shift, selectedDate, selectedWo
       }
 
       if (isEdit) {
-        await updateShift.mutateAsync({ id: shift.id, data: payload })
+        await updateShift.mutateAsync({ id: shift.id, data: payload as any })
       } else {
-        await createShift.mutateAsync(payload)
+        await createShift.mutateAsync(payload as any)
       }
       onOpenChange(false)
     } catch (error) {

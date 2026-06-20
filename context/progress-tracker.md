@@ -28,6 +28,49 @@
 
 ---
 
+### ✅ Support Coordination (COS) Module (spec-21)
+
+- [x] Step 1: Extended Prisma schema with CosParticipantProfile, CosFunding, CosSupportCatalogueItem, ExternalServiceProvider, CosCaseNote, NdisClaim, CosInvoice.
+- [x] Step 2: Created validation schemas in `lib/validations/cos.ts`.
+- [x] Step 3: Built API routes for `/api/cos/*`.
+- [x] Step 4: Created TanStack Query hooks in `hooks/use-cos.ts`.
+- [x] Step 5: Built `/cos` dashboard and related list pages (participants, catalogue, providers, case notes, claims, invoices).
+- [x] Step 6: `pnpm build` passes clean.
+
+---
+
+### ✅ Allied Health Module (spec-22)
+
+- [x] Step 1: Extended Prisma schema with `ProgramType` enum to support both COS and AlliedHealth.
+- [x] Step 2: Created API routes under `/api/ah/*` mirroring COS logic but filtered by program.
+- [x] Step 3: Created TanStack Query hooks in `hooks/use-allied-health.ts`.
+- [x] Step 4: Built `/ah` dashboard and related list pages, mirroring the COS structure.
+- [x] Step 5: `pnpm build` passes clean.
+
+---
+
+### ✅ Rostering Module (spec-23)
+
+- [x] Step 1: Extended Prisma schema with `Shift` and `ShiftTemplate`.
+- [x] Step 2: Created validation schemas in `lib/validations/rostering.ts`.
+- [x] Step 3: Built API routes for `/api/rostering/*` (shifts, leave requests).
+- [x] Step 4: Created TanStack Query hooks in `hooks/use-rostering.ts`.
+- [x] Step 5: Built `/rostering` dashboard, schedule view, timesheets, leave requests, and timesheet export pages.
+- [x] Step 6: Database synced and `pnpm build` passes clean.
+
+---
+
+### ✅ Home Management (SIL Accommodation) Module (spec-24)
+
+- [x] Step 1: Extended Prisma schema with `HomeProperty` and `HomeParticipant`.
+- [x] Step 2: Created validation schemas in `lib/validations/home-management.ts`.
+- [x] Step 3: Built API routes for `/api/home-management/homes`.
+- [x] Step 4: Created TanStack Query hooks in `hooks/use-home-management.ts`.
+- [x] Step 5: Built `/home-management/homes` dashboard with `HomeTable` and `HomeModal`.
+- [x] Step 6: `pnpm build` passes clean.
+
+---
+
 ### ✅ Forms CRM Module (spec-16)
 
 - [x] Step 1: Confirm `FormTemplate` model supports `kind='CRM'`
@@ -287,7 +330,7 @@
 2. [x] Invoicing Module (timesheet → invoice → export)
 3. [x] Support Coordination
 4. [x] Allied Health
-5. [x] Home Management (property registry)
+5. [x] Home Management (SIL Accommodation)
 6. [x] Forms Management (dynamic builder)
 7. [x] Reporting dashboards
 8. [x] Policies, Complaints, Feedback, Ask a Question
